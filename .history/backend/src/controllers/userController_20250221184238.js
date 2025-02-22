@@ -23,9 +23,8 @@ const userController = {
                 firstName,
                 lastName
             });
-            console.log('Attempting to save user:', user);
+
             await user.save();
-            console.log('User saved successfully. ID:', user._id);
 
             // Remove sensitive data before sending response
             const userResponse = user.toObject();

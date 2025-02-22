@@ -5,13 +5,6 @@ const userController = require('../controllers/userController');
 const userValidation = require('../validations/userValidations');
 const validate = require('../middleware/validate');
 
-
-// Test route
-router.get('/test', (req, res) => {
-    res.json({ message: 'User routes are working' });
-});
-
-
 // Auth routes
 router.post('/register', 
     validate(userValidation.register),
