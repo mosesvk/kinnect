@@ -28,21 +28,13 @@ const userController = {
       await user.save();
       console.log("User saved successfully. ID:", user._id);
 
-      const token = generateToken(user._id)
-
-      user.lastLogin = new Date() 
-      await user.save()
-
       // Remove sensitive data before sending response
       const userResponse = user.toObject();
       delete userResponse.passwordHash;
 
       res.status(201).json({
         success: true,
-        data: {
-          token, 
-          userResponse
-        },
+        data: userResponse,
       });
     } catch (error) {
       console.error("Register error:", error);
@@ -110,10 +102,9 @@ const userController = {
   // Update user profile
   updateProfile: async (req, res) => {
     try {
-      // console.log('udpateProfile', {body: req.body, user: req.user, params: req.pdarams})
       const { firstName, lastName, email } = req.body;
       // Assuming you have the user ID from authentication middleware
-      const userId = req.params.id;
+      const userId = req.user.id;
 
       const user = await User.findByIdAndUpdate(
         userId,

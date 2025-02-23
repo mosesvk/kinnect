@@ -23,10 +23,10 @@ router.post('/login',
     userController.login
 );
 
-// Profile routes
-router.put('/:id',
-    validate(userValidation.updateProfile),
-    userController.updateProfile
-);
+// // Profile routes
+// router.put('/profile',
+//     validate(userValidation.updateProfile),
+//     userController.updateProfile
+// );
 
 module.exports = router;

@@ -27,7 +27,7 @@ const userController = {
       console.log("Attempting to save user:", user);
       await user.save();
       console.log("User saved successfully. ID:", user._id);
-
+      
       const token = generateToken(user._id)
 
       user.lastLogin = new Date() 
@@ -110,10 +110,9 @@ const userController = {
   // Update user profile
   updateProfile: async (req, res) => {
     try {
-      // console.log('udpateProfile', {body: req.body, user: req.user, params: req.pdarams})
       const { firstName, lastName, email } = req.body;
       // Assuming you have the user ID from authentication middleware
-      const userId = req.params.id;
+      const userId = req.user.id;
 
       const user = await User.findByIdAndUpdate(
         userId,
