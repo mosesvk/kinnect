@@ -24,7 +24,7 @@ router.post('/login',
 );
 
 // Profile routes
-router.put('/:id',
+router.put('/profile',
     validate(userValidation.updateProfile),
     userController.updateProfile
 );
