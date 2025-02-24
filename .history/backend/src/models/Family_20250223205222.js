@@ -19,8 +19,8 @@ const familySchema = new mongoose.Schema({
     },
     role: {
       type: String,
-      required: true,
-      enum: ['admin', 'member', 'guardian', 'child']
+      enum: ['admin', 'member', 'guardian', 'child'],
+      default: 'member'
     },
     joinedAt: {
       type: Date,
@@ -28,48 +28,29 @@ const familySchema = new mongoose.Schema({
     },
     permissions: [{
       type: String,
-      enum: ['read', 'write', 'delete', 'manage']
+      enum: ['read', 'write', 'admin']
     }]
   }],
   settings: {
     privacyLevel: {
       type: String,
-      enum: ['private', 'friends', 'public'],
+      enum: ['private', 'members', 'public'],
       default: 'private'
     },
     notificationPreferences: {
-      type: Map,
-      of: Boolean,
-      default: {
-        events: true,
-        tasks: true,
-        documents: true,
-        messages: true
-      }
+      events: Boolean,
+      tasks: Boolean,
+      documents: Boolean,
+      default: true
     }
   }
 }, {
   timestamps: true
 });
 
-// Indexes
+// Index for efficient queries
 familySchema.index({ name: 1 });
 familySchema.index({ 'members.userId': 1 });
-
-// Methods
-familySchema.methods.isMember = function(userId) {
-  return this.members.some(member => member.userId.equals(userId));
-};
-
-familySchema.methods.getMemberRole = function(userId) {
-  const member = this.members.find(member => member.userId.equals(userId));
-  return member ? member.role : null;
-};
-
-// Statics
-familySchema.statics.findByMember = function(userId) {
-  return this.find({ 'members.userId': userId });
-};
 
 const Family = mongoose.model('Family', familySchema);
 
