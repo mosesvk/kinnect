@@ -42,17 +42,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'user'
   },
-  familyRoles: [{
-    familyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Family'
-    },
-    role: {
-      type: String,
-      enum: ['owner', 'admin', 'member'],
-      default: 'member'
-    }
-  }],
   status: {
     type: String,
     default: 'active'
