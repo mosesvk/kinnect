@@ -1,8 +1,6 @@
 // src/controllers/userController.js
 const User = require("../models/User");
-const Family = require('../models/Family')
 const { generateToken } = require("../utils/jwt");
-const mongoose = require('mongoose')
 
 const userController = {
   // Register a new user
@@ -30,10 +28,10 @@ const userController = {
       await user.save();
       console.log("User saved successfully. ID:", user._id);
 
-      const token = generateToken(user._id);
+      const token = generateToken(user._id)
 
-      user.lastLogin = new Date();
-      await user.save();
+      user.lastLogin = new Date() 
+      await user.save()
 
       // Remove sensitive data before sending response
       const userResponse = user.toObject();
@@ -42,8 +40,8 @@ const userController = {
       res.status(201).json({
         success: true,
         data: {
-          token,
-          userResponse,
+          token, 
+          userResponse
         },
       });
     } catch (error) {
@@ -147,72 +145,7 @@ const userController = {
     }
   },
 
-  // Delete user profile
-  deleteProfile: async (req, res) => {
-    try {
-      const userId = req.user._id;
-
-      // Start a session for transaction
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        // 1. Remove user from all families they're a member of
-        await Family.updateMany(
-          { "members.userId": userId },
-          { $pull: { members: { userId: userId } } },
-          { session }
-        );
-
-        // 2. Find families where this user was the only member
-        const emptyFamilies = await Family.find(
-          { members: { $size: 0 } },
-          null,
-          { session }
-        );
-
-        // 3. Delete empty families
-        if (emptyFamilies.length > 0) {
-          await Family.deleteMany(
-            { _id: { $in: emptyFamilies.map((f) => f._id) } },
-            { session }
-          );
-        }
-
-        // 4. Delete the user
-        const deletedUser = await User.findByIdAndDelete(userId, { session });
-
-        if (!deletedUser) {
-          await session.abortTransaction();
-          return res.status(404).json({
-            success: false,
-            message: "User not found",
-          });
-        }
-
-        // Commit the transaction
-        await session.commitTransaction();
-
-        res.status(200).json({
-          success: true,
-          message: "Profile successfully deleted",
-        });
-      } catch (error) {
-        // If an error occurs, abort the transaction
-        await session.abortTransaction();
-        throw error;
-      } finally {
-        // End the session
-        session.endSession();
-      }
-    } catch (error) {
-      console.error("Delete profile error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error deleting profile",
-      });
-    }
-  },
+  
 };
 
 module.exports = userController;
