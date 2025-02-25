@@ -18,14 +18,6 @@ router.get('/',
   familyController.getUserFamilies
 );
 
-// Join family with invitation code
-router.post(
-  '/join',
-  protect,
-  validate(familyValidation.joinFamily),
-  familyController.joinFamily
-);
-
 // Update family details
 router.put('/:familyId',
   protect,
