@@ -1,7 +1,6 @@
 // src/routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
-const {protect} = require('../middleware/auth')
 const userController = require('../controllers/userController');
 const userValidation = require('../validations/userValidations');
 const validate = require('../middleware/validate');

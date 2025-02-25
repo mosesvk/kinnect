@@ -1,8 +1,6 @@
 // src/controllers/userController.js
 const User = require("../models/User");
-const Family = require('../models/Family')
 const { generateToken } = require("../utils/jwt");
-const mongoose = require('mongoose')
 
 const userController = {
   // Register a new user
