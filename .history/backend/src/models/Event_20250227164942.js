@@ -84,7 +84,7 @@ const eventSchema = new mongoose.Schema({
   }],
   category: {
     type: String,
-    enum: ['general', 'family', 'health', 'education', 'travel', 'celebration', 'task', 'meal', 'other'],
+    enum: ['general', 'family', 'health', 'education', 'travel', 'celebration', 'task', 'other'],
     default: 'general'
   },
   createdBy: {
