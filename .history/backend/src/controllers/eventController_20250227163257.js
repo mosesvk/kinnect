@@ -1,109 +1,80 @@
 // src/controllers/eventController.js
-const Event = require("../models/Event");
-const Family = require("../models/Family");
+const Event = require('../models/Event');
+const Family = require('../models/Family');
 
 const eventController = {
   // Create a new event
   createEvent: async (req, res) => {
     try {
-      const {
-        familyId,
-        title,
-        description = "", // Default empty string if not provided
-        startDate,
-        endDate = null, // Default null if not provided
-        location = {}, // Default empty object if not provided
-        attendees = [], // Default empty array if not provided
-        recurring = null, // Default null if not provided
-        reminders = [], // Default empty array if not provided
-        category = "general", // Default category if not provided
+      const { 
+        familyId, title, description, startDate, endDate, 
+        location, attendees, recurring, reminders, category 
       } = req.body;
-
+      
       const userId = req.user._id;
-
-      // Validate required fields
-      if (!familyId || !title || !startDate) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Missing required fields: familyId, title, and startDate are required",
-        });
-      }
 
       // Verify user is a member of the family
       const family = await Family.findOne({
         _id: familyId,
-        "members.userId": userId,
+        'members.userId': userIdd
       });
 
       if (!family) {
         return res.status(403).json({
           success: false,
-          message:
-            "You do not have permission to create events for this family",
+          message: 'You do not have permission to create events for this family'
         });
       }
 
-      // Create the event with default values where needed
+      // Create the event
       const event = new Event({
         familyId,
         title,
         description,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        location: location || {},
+        startDate,
+        endDate,
+        location,
         createdBy: userId,
-        category,
+        category: category || 'general'
       });
 
-      // Handle attendees - add creator as an attendee if not already included
-      const processedAttendees = [...(attendees || [])];
-      const creatorIncluded = processedAttendees.some(
-        (attendee) =>
-          attendee.userId && attendee.userId.toString() === userId.toString()
+      // Add creator as an attendee if not already included
+      const creatorIncluded = attendees?.some(
+        attendee => attendee.userId.toString() === userId.toString()
       );
 
       if (!creatorIncluded) {
-        processedAttendees.unshift({ userId, status: "accepted" });
+        event.attendees = [{ userId, status: 'accepted' }, ...(attendees || [])];
+      } else if (attendees) {
+        event.attendees = attendees;
       }
 
-      event.attendees = processedAttendees;
-
       // Add recurring info if provided
-      if (recurring && recurring.frequency) {
-        // Default values for recurring
-        event.recurring = {
-          frequency: recurring.frequency,
-          endDate: recurring.endDate || null,
-          interval: recurring.interval || 1,
-        };
+      if (recurring && recurring.frequency !== 'none') {
+        event.recurring = recurring;
       }
 
       // Add reminders if provided
       if (reminders && reminders.length > 0) {
-        // Ensure each reminder has required fields
-        event.reminders = reminders.map((reminder) => ({
-          type: reminder.type || "notification",
-          time: reminder.time || 15, // Default 15 minutes before
-        }));
+        event.reminders = reminders;
       }
 
       await event.save();
 
       // Populate creator and attendees info
-      await event.populate("createdBy", "firstName lastName");
-      await event.populate("attendees.userId", "firstName lastName");
+      await event.populate('createdBy', 'firstName lastName');
+      await event.populate('attendees.userId', 'firstName lastName');
 
       res.status(201).json({
         success: true,
-        data: event,
+        data: event
       });
     } catch (error) {
-      console.error("Create event error:", error);
+      console.error('Create event error:', error);
       res.status(500).json({
         success: false,
-        message: "Error creating event",
-        error: error.message,
+        message: 'Error creating event',
+        error: error.message
       });
     }
   },
@@ -118,13 +89,13 @@ const eventController = {
       // Verify user is a member of the family
       const family = await Family.findOne({
         _id: familyId,
-        "members.userId": userId,
+        'members.userId': userId
       });
 
       if (!family) {
         return res.status(403).json({
           success: false,
-          message: "You do not have permission to view events for this family",
+          message: 'You do not have permission to view events for this family'
         });
       }
 
@@ -148,20 +119,20 @@ const eventController = {
 
       // Fetch events
       const events = await Event.find(query)
-        .populate("createdBy", "firstName lastName")
-        .populate("attendees.userId", "firstName lastName")
+        .populate('createdBy', 'firstName lastName')
+        .populate('attendees.userId', 'firstName lastName')
         .sort({ startDate: 1 });
 
       res.json({
         success: true,
-        data: events,
+        data: events
       });
     } catch (error) {
-      console.error("Get events error:", error);
+      console.error('Get events error:', error);
       res.status(500).json({
         success: false,
-        message: "Error fetching events",
-        error: error.message,
+        message: 'Error fetching events',
+        error: error.message
       });
     }
   },
@@ -173,39 +144,39 @@ const eventController = {
       const userId = req.user._id;
 
       const event = await Event.findById(eventId)
-        .populate("createdBy", "firstName lastName")
-        .populate("attendees.userId", "firstName lastName");
+        .populate('createdBy', 'firstName lastName')
+        .populate('attendees.userId', 'firstName lastName');
 
       if (!event) {
         return res.status(404).json({
           success: false,
-          message: "Event not found",
+          message: 'Event not found'
         });
       }
 
       // Verify user is a member of the family
       const family = await Family.findOne({
         _id: event.familyId,
-        "members.userId": userId,
+        'members.userId': userId
       });
 
       if (!family) {
         return res.status(403).json({
           success: false,
-          message: "You do not have permission to view this event",
+          message: 'You do not have permission to view this event'
         });
       }
 
       res.json({
         success: true,
-        data: event,
+        data: event
       });
     } catch (error) {
-      console.error("Get event error:", error);
+      console.error('Get event error:', error);
       res.status(500).json({
         success: false,
-        message: "Error fetching event",
-        error: error.message,
+        message: 'Error fetching event',
+        error: error.message
       });
     }
   },
@@ -223,7 +194,7 @@ const eventController = {
       if (!event) {
         return res.status(404).json({
           success: false,
-          message: "Event not found",
+          message: 'Event not found'
         });
       }
 
@@ -233,46 +204,46 @@ const eventController = {
         members: {
           $elemMatch: {
             userId,
-            role: "admin",
-          },
-        },
+            role: 'admin'
+          }
+        }
       });
 
       if (event.createdBy.toString() !== userId.toString() && !family) {
         return res.status(403).json({
           success: false,
-          message: "You do not have permission to update this event",
+          message: 'You do not have permission to update this event'
         });
       }
 
       // Special handling for attendees to prevent overriding
       if (updateData.attendees) {
         // Keep existing attendees but update their status if included in the update
-        const currentAttendees = event.attendees.map((a) => ({
+        const currentAttendees = event.attendees.map(a => ({
           userId: a.userId,
-          status: a.status,
+          status: a.status
         }));
-
-        const updatedAttendees = updateData.attendees.map((a) => ({
+        
+        const updatedAttendees = updateData.attendees.map(a => ({
           userId: a.userId,
-          status: a.status,
+          status: a.status
         }));
-
+        
         // Merge attendees lists
         const mergedAttendees = [...currentAttendees];
-
-        updatedAttendees.forEach((updatedAttendee) => {
+        
+        updatedAttendees.forEach(updatedAttendee => {
           const existingIndex = mergedAttendees.findIndex(
-            (a) => a.userId.toString() === updatedAttendee.userId.toString()
+            a => a.userId.toString() === updatedAttendee.userId.toString()
           );
-
+          
           if (existingIndex >= 0) {
             mergedAttendees[existingIndex] = updatedAttendee;
           } else {
             mergedAttendees.push(updatedAttendee);
           }
         });
-
+        
         updateData.attendees = mergedAttendees;
       }
 
@@ -282,19 +253,19 @@ const eventController = {
         { $set: updateData },
         { new: true }
       )
-        .populate("createdBy", "firstName lastName")
-        .populate("attendees.userId", "firstName lastName");
+        .populate('createdBy', 'firstName lastName')
+        .populate('attendees.userId', 'firstName lastName');
 
       res.json({
         success: true,
-        data: updatedEvent,
+        data: updatedEvent
       });
     } catch (error) {
-      console.error("Update event error:", error);
+      console.error('Update event error:', error);
       res.status(500).json({
         success: false,
-        message: "Error updating event",
-        error: error.message,
+        message: 'Error updating event',
+        error: error.message
       });
     }
   },
@@ -311,7 +282,7 @@ const eventController = {
       if (!event) {
         return res.status(404).json({
           success: false,
-          message: "Event not found",
+          message: 'Event not found'
         });
       }
 
@@ -321,15 +292,15 @@ const eventController = {
         members: {
           $elemMatch: {
             userId,
-            role: "admin",
-          },
-        },
+            role: 'admin'
+          }
+        }
       });
 
       if (event.createdBy.toString() !== userId.toString() && !family) {
         return res.status(403).json({
           success: false,
-          message: "You do not have permission to delete this event",
+          message: 'You do not have permission to delete this event'
         });
       }
 
@@ -338,14 +309,14 @@ const eventController = {
 
       res.json({
         success: true,
-        message: "Event deleted successfully",
+        message: 'Event deleted successfully'
       });
     } catch (error) {
-      console.error("Delete event error:", error);
+      console.error('Delete event error:', error);
       res.status(500).json({
         success: false,
-        message: "Error deleting event",
-        error: error.message,
+        message: 'Error deleting event',
+        error: error.message
       });
     }
   },
@@ -363,27 +334,26 @@ const eventController = {
       if (!event) {
         return res.status(404).json({
           success: false,
-          message: "Event not found",
+          message: 'Event not found'
         });
       }
 
       // Verify user is a member of the family
       const family = await Family.findOne({
         _id: event.familyId,
-        "members.userId": userId,
+        'members.userId': userId
       });
 
       if (!family) {
         return res.status(403).json({
           success: false,
-          message:
-            "You do not have permission to update attendance for this event",
+          message: 'You do not have permission to update attendance for this event'
         });
       }
 
       // Check if user is already an attendee
       const attendeeIndex = event.attendees.findIndex(
-        (attendee) => attendee.userId.toString() === userId.toString()
+        attendee => attendee.userId.toString() === userId.toString()
       );
 
       if (attendeeIndex >= 0) {
@@ -393,23 +363,23 @@ const eventController = {
         // Add user as a new attendee
         event.attendees.push({
           userId,
-          status,
+          status
         });
       }
 
       await event.save();
-      await event.populate("attendees.userId", "firstName lastName");
+      await event.populate('attendees.userId', 'firstName lastName');
 
       res.json({
         success: true,
-        data: event,
+        data: event
       });
     } catch (error) {
-      console.error("Update attendance error:", error);
+      console.error('Update attendance error:', error);
       res.status(500).json({
         success: false,
-        message: "Error updating attendance",
-        error: error.message,
+        message: 'Error updating attendance',
+        error: error.message
       });
     }
   },
@@ -422,7 +392,10 @@ const eventController = {
 
       // Build query
       const query = {
-        $or: [{ "attendees.userId": userId }, { createdBy: userId }],
+        $or: [
+          { 'attendees.userId': userId },
+          { createdBy: userId }
+        ]
       };
 
       // Add date range filter if provided
@@ -437,24 +410,24 @@ const eventController = {
 
       // Fetch events
       const events = await Event.find(query)
-        .populate("familyId", "name")
-        .populate("createdBy", "firstName lastName")
-        .populate("attendees.userId", "firstName lastName")
+        .populate('familyId', 'name')
+        .populate('createdBy', 'firstName lastName')
+        .populate('attendees.userId', 'firstName lastName')
         .sort({ startDate: 1 });
 
       res.json({
         success: true,
-        data: events,
+        data: events
       });
     } catch (error) {
-      console.error("Get user events error:", error);
+      console.error('Get user events error:', error);
       res.status(500).json({
         success: false,
-        message: "Error fetching user events",
-        error: error.message,
+        message: 'Error fetching user events',
+        error: error.message
       });
     }
-  },
+  }
 };
 
 module.exports = eventController;
