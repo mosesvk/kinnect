@@ -4,7 +4,6 @@ const Family = require("../models/Family");
 
 const eventController = {
   // Create a new event
-  // api/events
   createEvent: async (req, res) => {
     try {
       const {
@@ -110,7 +109,6 @@ const eventController = {
   },
 
   // Get all events for a family
-  // api/events/family/:familyId
   getEventsByFamily: async (req, res) => {
     try {
       const { familyId } = req.params;
@@ -169,7 +167,6 @@ const eventController = {
   },
 
   // Get a single event by ID
-  // api/events/:eventId
   getEventById: async (req, res) => {
     try {
       const { eventId } = req.params;
@@ -214,7 +211,6 @@ const eventController = {
   },
 
   // Update an event
-  // api/events/:eventId
   updateEvent: async (req, res) => {
     try {
       const { eventId } = req.params;
@@ -304,7 +300,6 @@ const eventController = {
   },
 
   // Delete an event
-  // api/events/:eventId
   deleteEvent: async (req, res) => {
     try {
       const { eventId } = req.params;
@@ -356,7 +351,6 @@ const eventController = {
   },
 
   // Update attendance status
-  // api/events/:eventId
   updateAttendance: async (req, res) => {
     try {
       const { eventId } = req.params;
@@ -421,7 +415,6 @@ const eventController = {
   },
 
   // Get user's events across all families
-  // api/events/:eventId
   getUserEvents: async (req, res) => {
     try {
       const userId = req.user._id;
