@@ -23,7 +23,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/users', userRoutes);
-
+app.use('/api/families', familyRoutes);
+app.use('/api/events', eventRoutes);
 
 // Connect to database and sync models
 const start = async () => {

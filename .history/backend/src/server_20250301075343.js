@@ -24,7 +24,6 @@ app.get('/', (req, res) => {
 
 app.use('/api/users', userRoutes);
 
-
 // Connect to database and sync models
 const start = async () => {
   try {

@@ -1,6 +1,6 @@
 const express = require('express');
 const { connectDB } = require('./config/database.js');
-const { syncDatabase } = require('./models/Index.js');
+const { syncDatabase } = require('./models/index.js');
 const dotenv = require('dotenv');
 const userRoutes = require('./routes/userRoutes.js');
 const familyRoutes = require('./routes/familyRoutes.js');
@@ -23,7 +23,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/users', userRoutes);
-
+app.use('/api/families', familyRoutes);
+app.use('/api/events', eventRoutes);
 
 // Connect to database and sync models
 const start = async () => {
