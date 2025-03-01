@@ -1,5 +1,5 @@
 // controllers/userController.js
-const { User, Family, FamilyMember } = require('./models');
+const { User, Family, FamilyMember } = require('../models');
 const { generateToken } = require('../utils/jwt');
 const { sequelize } = require('../config/database');
 
