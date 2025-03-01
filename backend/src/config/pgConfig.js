@@ -1,25 +1,28 @@
-// config/pgdb.js
+// config/pgConfig.js
 const { Sequelize } = require('sequelize');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const sequelize = new Sequelize(
-  process.env.PG_DATABASE,
-  process.env.PG_USER,
-  process.env.PG_PASSWORD,
+  process.env.POSTGRES_DB || 'familyapp',
+  process.env.POSTGRES_USER || 'familyuser',
+  process.env.POSTGRES_PASSWORD || 'yourpassword',
   {
-    host: process.env.PG_HOST,
-    port: process.env.PG_PORT || 5432,
+    host: process.env.POSTGRES_HOST || 'localhost',
     dialect: 'postgres',
+    port: process.env.POSTGRES_PORT || 5600,
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
       max: 5,
       min: 0,
       acquire: 30000,
-      idle: 10000
-    }
+      idle: 10000,
+    },
   }
 );
 
-const connectDb = async () => {
+const connectPG = async () => {
   try {
     await sequelize.authenticate();
     console.log('PostgreSQL connection established successfully.');
@@ -29,4 +32,4 @@ const connectDb = async () => {
   }
 };
 
-module.exports = { sequelize, connectDb };
+module.exports = { sequelize, connectPG };
