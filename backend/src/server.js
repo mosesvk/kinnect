@@ -1,5 +1,5 @@
 const express = require('express')
-const connectDB = require('./config/db.js')
+const { connectDb } = require('./config/db.js') // PostgreSQL connection
 const dotenv = require('dotenv')
 const userRoutes = require('./routes/userRoutes.js')
 const familyRoutes = require('./routes/familyRoutes.js')
@@ -17,20 +17,17 @@ app.use(cors())
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet())
 
-
 app.get('/', (req, res) => {
     res.send('API is sending...')
 })
 
-app.use('/api/users', userRoutes)
-app.use('/api/families', familyRoutes)
-app.use('/api/events', eventRoutes)
+// app.use('/api/users', userRoutes)
+// app.use('/api/families', familyRoutes)
+// app.use('/api/events', eventRoutes)
 
+// Connect to PostgreSQL
+connectDb()
 
-connectDB()
-
-app.listen(PORT, () => {
-    console.log(`Running on port: ${PORT}`)
-})
-
-
+// app.listen(PORT, () => {
+//     console.log(`Running on port: ${PORT}`)
+// })
