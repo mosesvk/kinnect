@@ -3,6 +3,7 @@ const { connectDB } = require('./config/db');
 const { syncDatabase } = require('./models/Index');
 const dotenv = require('dotenv');
 const userRoutes = require('./routes/userRoutes');
+const familyRoutes = require('./routes/familyRoutes')
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -45,8 +46,17 @@ app.get('/api', (req, res) => {
   });
 });
 
+app.post('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Test endpoint working'
+  });
+});
+
 // API routes
 app.use('/api/users', userRoutes);
+app.use('/api/families', familyRoutes);
+
 // Add other routes as needed
 
 // Error handling middleware

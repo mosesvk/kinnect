@@ -16,7 +16,7 @@ const generateToken = (id) => {
 exports.registerUser = async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
-
+        
         // Check if required fields are provided
         if (!firstName || !lastName || !email || !password) {
             return res.status(400).json({
