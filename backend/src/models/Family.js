@@ -1,7 +1,6 @@
-// models/Family.js
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-const crypto = require('crypto');
+const { sequelize } = require('../config/db');
+const User = require('./User');
 
 const Family = sequelize.define('Family', {
   id: {
@@ -13,40 +12,82 @@ const Family = sequelize.define('Family', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  createdById: {
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  createdBy: {
     type: DataTypes.UUID,
-    allowNull: false
+    allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
   settings: {
     type: DataTypes.JSONB,
+    allowNull: true,
     defaultValue: {
       privacyLevel: 'private',
-      notificationPreferences: {}
+      notificationPreferences: {
+        events: true,
+        tasks: true,
+        documents: true
+      }
     }
-  },
-  invitationCode: {
-    type: DataTypes.STRING,
-    unique: true,
-    defaultValue: () => crypto.randomBytes(6).toString('hex')
-  },
-  invitationExpiry: {
-    type: DataTypes.DATE,
-    defaultValue: () => new Date(Date.now() + 30*24*60*60*1000) // 30 days from now
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 });
 
-// Instance methods
-Family.prototype.generateInvitationCode = async function() {
-  this.invitationCode = crypto.randomBytes(6).toString('hex');
-  this.invitationExpiry = new Date(Date.now() + 30*24*60*60*1000);
-  await this.save();
-  return this.invitationCode;
-};
+// Define FamilyMember as a through table for User-Family relationship
+const FamilyMember = sequelize.define('FamilyMember', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  familyId: {
+    type: DataTypes.UUID,
+    references: {
+      model: 'Families',
+      key: 'id'
+    }
+  },
+  userId: {
+    type: DataTypes.UUID,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
+  },
+  role: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'member'
+  },
+  permissions: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    allowNull: true,
+    defaultValue: ['view']
+  },
+  joinedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+});
 
-Family.prototype.isInvitationValid = function() {
-  return this.invitationExpiry > new Date();
-};
+// Define the relationships
+User.belongsToMany(Family, { through: FamilyMember, foreignKey: 'userId' });
+Family.belongsToMany(User, { through: FamilyMember, foreignKey: 'familyId' });
 
-module.exports = Family;
+Family.hasMany(FamilyMember);
+FamilyMember.belongsTo(Family);
+
+User.hasMany(FamilyMember);
+FamilyMember.belongsTo(User);
+
+module.exports = { Family, FamilyMember };
