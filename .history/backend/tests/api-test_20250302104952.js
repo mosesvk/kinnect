@@ -59,15 +59,15 @@ const runTests = async () => {
     console.log('Sending user data:', testUser);
     try {
         const registerResponse = await axios.post(`${API_URL}/users/register`, testUser);
-        // console.log('CHECK------>', registerResponse)
-        // console.log('Response headers:', registerResponse.headers);
-        // console.log('Response status:', registerResponse.status);
+        console.log('CHECK------>', registerResponse)
+        console.log('Response headers:', registerResponse.headers);
+        console.log('Response status:', registerResponse.status);
         console.log('✅ User registered successfully');
-        console.log('User ID:', registerResponse.data.user.id);
-        console.log('Token:', registerResponse.data.user.token);
+        console.log('User ID:', registerResponse.user.id);
+        console.log('Token:', registerResponse.user.token);
         
-        userId = registerResponse.data.user.id;
-        token = registerResponse.data.usertoken;
+        userId = registerResponse.data.id;
+        token = registerResponse.data.token;
     } catch (registerError) {
         console.error('❌ User registration failed:', registerError.message);
         if (registerError.response) {
@@ -83,7 +83,7 @@ const runTests = async () => {
       password: testUser.password
     });
     console.log('✅ Login successful');
-    token = loginResponse.data.user.token;
+    token = loginResponse.data.token;
 
     // Test 3: Get user profile
     console.log('\n🧪 Test 3: Get user profile');
