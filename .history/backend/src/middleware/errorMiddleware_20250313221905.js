@@ -1,3 +1,8 @@
+// src/middleware/errorMiddleware.js
+/**
+ * Global error handling middleware for the application
+ * This provides consistent error responses throughout the API
+ */
 
 // Handle 404 errors (Resource not found)
 const notFound = (req, res, next) => {
