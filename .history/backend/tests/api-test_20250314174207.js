@@ -20,7 +20,7 @@ const generateRandomEmail = () => {
 
 // Test user data
 const testUser = {
-  email: generateRandomEmail(),
+  email: 'test@example.com',
   password: 'password123',
   firstName: 'Test',
   lastName: 'User',
