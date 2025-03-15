@@ -1,6 +1,6 @@
 // models/FamilyMember.js
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/db');
+const { sequelize } = require('../config/database');
 
 const FamilyMember = sequelize.define('FamilyMember', {
   id: {
