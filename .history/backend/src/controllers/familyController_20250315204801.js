@@ -205,7 +205,26 @@ exports.updateFamily = async (req, res) => {
     }
 
     // Get the family
-    const family = await Family.findByPk(familyId);
+    const family = await Family.findByPk(familyId, {
+      include: [
+        {
+          model: FamilyMember,
+          as: "members",
+          include: [
+            {
+              model: User,
+              attributes: [
+                "id",
+                "firstName",
+                "lastName",
+                "email",
+                "profileImage",
+              ],
+            },
+          ],
+        },
+      ],
+    });
 
     if (!family) {
       return res.status(404).json({
