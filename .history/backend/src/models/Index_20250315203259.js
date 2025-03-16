@@ -1,7 +1,6 @@
 // src/models/Index.js
 const User = require('./User');
-const Family = require('./Family');
-const FamlyMember = require('./FamilyMember')
+const { Family, FamilyMember } = require('./Family');
 const Event = require('./Event');
 const EventAttendee = require('./EventAttendee');
 
@@ -91,4 +90,4 @@ module.exports = {
   Event,
   EventAttendee,
   syncDatabase
-};
+};d
