@@ -1,8 +1,7 @@
 // controllers/familyController.js
-const { Family, FamilyMember } = require("../models/Family");
-const User = require("../models/User");
-const { sequelize } = require("../config/db");
-const { Op } = require("sequelize");
+const { Family, FamilyMember } = require('../models/Family');
+const User = require('../models/User');
+const { Op } = require('sequelize');
 
 // @desc    Create a new family
 // @route   POST /api/families
@@ -15,7 +14,7 @@ exports.createFamily = async (req, res) => {
     if (!name) {
       return res.status(400).json({
         success: false,
-        message: "Please provide a family name",
+        message: 'Please provide a family name'
       });
     }
 
@@ -24,27 +23,27 @@ exports.createFamily = async (req, res) => {
       name,
       description,
       settings,
-      createdBy: req.user.id,
+      createdBy: req.user.id
     });
 
     // Add creator as admin member
     await FamilyMember.create({
       familyId: family.id,
       userId: req.user.id,
-      role: "admin",
-      permissions: ["view", "edit", "delete", "invite"],
+      role: 'admin',
+      permissions: ['view', 'edit', 'delete', 'invite']
     });
 
     res.status(201).json({
       success: true,
-      family,
+      family
     });
   } catch (error) {
-    console.error("Create family error:", error);
+    console.error('Create family error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -54,60 +53,36 @@ exports.createFamily = async (req, res) => {
 // @access  Private
 exports.getUserFamilies = async (req, res) => {
   try {
-    console.log("Getting families for user ID:", req.user.id);
-
-    // Since we have association issues, let's use a direct query approach instead
-    const query = `
-      SELECT 
-        f.id, 
-        f.name, 
-        f.description, 
-        f."createdBy", 
-        f.settings, 
-        f."createdAt", 
-        f."updatedAt",
-        fm.role AS "userRole", 
-        fm.permissions AS "userPermissions", 
-        fm."joinedAt"
-      FROM 
-        "Families" f
-      JOIN 
-        "FamilyMembers" fm ON f.id = fm."familyId"
-      WHERE 
-        fm."userId" = :userId
-    `;
-
-    // Get all results as an array
-    const families = await sequelize.query(query, {
-      replacements: { userId: req.user.id },
-      type: sequelize.QueryTypes.SELECT,
+    // Find all family memberships for this user
+    const memberships = await FamilyMember.findAll({
+      where: { userId: req.user.id },
+      include: [{ 
+        model: Family,
+        required: true // This ensures only records with existing Family are returned
+      }]
     });
 
-    // Add explicit check and logging for the families array
-    if (families && Array.isArray(families)) {
-      console.log(`Found ${families.length} families for user`);
-    } else {
-      console.log("Query returned a non-array result:", families);
-      // Ensure we have a valid array even if something unexpected happened
-      families = Array.isArray(families) ? families : [];
-    }
-
-    // Transform the result to match the expected format
-    const resultFamilies = Array.isArray(families)
-      ? families
-      : [families].filter((f) => f && f.id);
+    // Extract the family data
+    const families = memberships
+      .filter(membership => membership.Family) // Additional safety check
+      .map(membership => ({
+        ...membership.Family.dataValues,
+        userRole: membership.role,
+        userPermissions: membership.permissions,
+        joinedAt: membership.joinedAt
+      }));
 
     res.json({
       success: true,
-      count: resultFamilies.length,
-      families: resultFamilies,
+      count: families.length,
+      families
     });
   } catch (error) {
-    console.error("Get families error:", error);
+    console.error('Get families error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -121,44 +96,34 @@ exports.getFamilyById = async (req, res) => {
 
     // Check if user is a member of this family
     const membership = await FamilyMember.findOne({
-      where: {
-        familyId,
-        userId: req.user.id,
-      },
+      where: { 
+        familyId, 
+        userId: req.user.id 
+      }
     });
 
     if (!membership) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to access this family",
+        message: 'Not authorized to access this family'
       });
     }
 
     // Get family with member details
     const family = await Family.findByPk(familyId, {
-      include: [
-        {
-          model: FamilyMember,
-          include: [
-            {
-              model: User,
-              attributes: [
-                "id",
-                "firstName",
-                "lastName",
-                "email",
-                "profileImage",
-              ],
-            },
-          ],
-        },
-      ],
+      include: [{
+        model: FamilyMember,
+        include: [{
+          model: User,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage']
+        }]
+      }]
     });
 
     if (!family) {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: 'Family not found'
       });
     }
 
@@ -166,14 +131,14 @@ exports.getFamilyById = async (req, res) => {
       success: true,
       family,
       userRole: membership.role,
-      userPermissions: membership.permissions,
+      userPermissions: membership.permissions
     });
   } catch (error) {
-    console.error("Get family error:", error);
+    console.error('Get family error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -188,17 +153,17 @@ exports.updateFamily = async (req, res) => {
 
     // Check if user has admin permissions
     const membership = await FamilyMember.findOne({
-      where: {
-        familyId,
+      where: { 
+        familyId, 
         userId: req.user.id,
-        role: "admin",
-      },
+        role: 'admin'
+      }
     });
 
     if (!membership) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to update this family",
+        message: 'Not authorized to update this family'
       });
     }
 
@@ -208,7 +173,7 @@ exports.updateFamily = async (req, res) => {
     if (!family) {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: 'Family not found'
       });
     }
 
@@ -221,14 +186,14 @@ exports.updateFamily = async (req, res) => {
 
     res.json({
       success: true,
-      family,
+      family
     });
   } catch (error) {
-    console.error("Update family error:", error);
+    console.error('Update family error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -243,17 +208,17 @@ exports.addFamilyMember = async (req, res) => {
 
     // Check if user has admin permissions
     const adminMembership = await FamilyMember.findOne({
-      where: {
-        familyId,
+      where: { 
+        familyId, 
         userId: req.user.id,
-        role: "admin",
-      },
+        role: 'admin'
+      }
     });
 
     if (!adminMembership) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to add members to this family",
+        message: 'Not authorized to add members to this family'
       });
     }
 
@@ -263,34 +228,34 @@ exports.addFamilyMember = async (req, res) => {
     if (!userToAdd) {
       return res.status(404).json({
         success: false,
-        message: "User not found with this email",
+        message: 'User not found with this email'
       });
     }
 
     // Check if user is already a member
     const existingMembership = await FamilyMember.findOne({
-      where: {
-        familyId,
-        userId: userToAdd.id,
-      },
+      where: { 
+        familyId, 
+        userId: userToAdd.id 
+      }
     });
 
     if (existingMembership) {
       return res.status(400).json({
         success: false,
-        message: "User is already a member of this family",
+        message: 'User is already a member of this family'
       });
     }
 
     // Add the new member
-    const memberRole = role || "member";
-    const memberPermissions = permissions || ["view"];
+    const memberRole = role || 'member';
+    const memberPermissions = permissions || ['view'];
 
     const membership = await FamilyMember.create({
       familyId,
       userId: userToAdd.id,
       role: memberRole,
-      permissions: memberPermissions,
+      permissions: memberPermissions
     });
 
     res.status(201).json({
@@ -300,15 +265,15 @@ exports.addFamilyMember = async (req, res) => {
         id: userToAdd.id,
         firstName: userToAdd.firstName,
         lastName: userToAdd.lastName,
-        email: userToAdd.email,
-      },
+        email: userToAdd.email
+      }
     });
   } catch (error) {
-    console.error("Add family member error:", error);
+    console.error('Add family member error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -322,58 +287,58 @@ exports.removeFamilyMember = async (req, res) => {
 
     // Check if user has admin permissions
     const adminMembership = await FamilyMember.findOne({
-      where: {
-        familyId,
+      where: { 
+        familyId, 
         userId: req.user.id,
-        role: "admin",
-      },
+        role: 'admin'
+      }
     });
 
     if (!adminMembership) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to remove members from this family",
+        message: 'Not authorized to remove members from this family'
       });
     }
 
     // Find the membership to remove
     const membershipToRemove = await FamilyMember.findOne({
-      where: {
-        familyId,
-        userId,
-      },
+      where: { 
+        familyId, 
+        userId 
+      }
     });
 
     if (!membershipToRemove) {
       return res.status(404).json({
         success: false,
-        message: "User is not a member of this family",
+        message: 'User is not a member of this family'
       });
     }
 
     // Don't allow removing the creator/last admin
     const family = await Family.findByPk(familyId);
-
+    
     if (family.createdBy === userId) {
       return res.status(400).json({
         success: false,
-        message: "Cannot remove the family creator",
+        message: 'Cannot remove the family creator'
       });
     }
 
     // Count admins to ensure at least one remains
-    if (membershipToRemove.role === "admin") {
+    if (membershipToRemove.role === 'admin') {
       const adminCount = await FamilyMember.count({
-        where: {
-          familyId,
-          role: "admin",
-        },
+        where: { 
+          familyId, 
+          role: 'admin' 
+        }
       });
 
       if (adminCount <= 1) {
         return res.status(400).json({
           success: false,
-          message: "Cannot remove the last admin from the family",
+          message: 'Cannot remove the last admin from the family'
         });
       }
     }
@@ -383,14 +348,14 @@ exports.removeFamilyMember = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Member removed successfully",
+      message: 'Member removed successfully'
     });
   } catch (error) {
-    console.error("Remove family member error:", error);
+    console.error('Remove family member error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -408,7 +373,7 @@ exports.deleteFamily = async (req, res) => {
     if (!family) {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: 'Family not found'
       });
     }
 
@@ -416,13 +381,13 @@ exports.deleteFamily = async (req, res) => {
     if (family.createdBy !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: "Only the family creator can delete it",
+        message: 'Only the family creator can delete it'
       });
     }
 
     // Delete all family members first (due to foreign key constraints)
     await FamilyMember.destroy({
-      where: { familyId },
+      where: { familyId }
     });
 
     // Delete the family
@@ -430,14 +395,14 @@ exports.deleteFamily = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Family deleted successfully",
+      message: 'Family deleted successfully'
     });
   } catch (error) {
-    console.error("Delete family error:", error);
+    console.error('Delete family error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };

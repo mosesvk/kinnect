@@ -1,7 +1,7 @@
 // controllers/familyController.js
 const { Family, FamilyMember } = require("../models/Family");
 const User = require("../models/User");
-const { sequelize } = require("../config/db");
+const { sequelize } = require('../config/db');
 const { Op } = require("sequelize");
 
 // @desc    Create a new family
@@ -56,55 +56,98 @@ exports.getUserFamilies = async (req, res) => {
   try {
     console.log("Getting families for user ID:", req.user.id);
 
-    // Since we have association issues, let's use a direct query approach instead
-    const query = `
-      SELECT 
-        f.id, 
-        f.name, 
-        f.description, 
-        f."createdBy", 
-        f.settings, 
-        f."createdAt", 
-        f."updatedAt",
-        fm.role AS "userRole", 
-        fm.permissions AS "userPermissions", 
-        fm."joinedAt"
-      FROM 
-        "Families" f
-      JOIN 
-        "FamilyMembers" fm ON f.id = fm."familyId"
-      WHERE 
-        fm."userId" = :userId
-    `;
-
-    // Get all results as an array
-    const families = await sequelize.query(query, {
-      replacements: { userId: req.user.id },
-      type: sequelize.QueryTypes.SELECT,
+    // First, let's check if the user has any family memberships
+    const membershipCount = await FamilyMember.count({
+      where: { userId: req.user.id },
     });
 
-    // Add explicit check and logging for the families array
-    if (families && Array.isArray(families)) {
-      console.log(`Found ${families.length} families for user`);
-    } else {
-      console.log("Query returned a non-array result:", families);
-      // Ensure we have a valid array even if something unexpected happened
-      families = Array.isArray(families) ? families : [];
+    console.log("Found membership count:", membershipCount);
+
+    if (membershipCount === 0) {
+      // No memberships found for this user
+      return res.json({
+        success: true,
+        message: "No families found for this user",
+        count: 0,
+        families: [],
+      });
     }
 
-    // Transform the result to match the expected format
-    const resultFamilies = Array.isArray(families)
-      ? families
-      : [families].filter((f) => f && f.id);
+    // Use raw query to debug database state
+    const [rawMemberships] = await sequelize.query(
+      `SELECT fm.id, fm.role, fm.permissions, fm."familyId", f.name, f.description 
+       FROM "FamilyMembers" fm
+       LEFT JOIN "Families" f ON fm."familyId" = f.id
+       WHERE fm."userId" = :userId`,
+      {
+        replacements: { userId: req.user.id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
 
-    res.json({
+    console.log(
+      "Raw memberships query result:",
+      JSON.stringify(rawMemberships, null, 2)
+    );
+
+    // Now try the original query with debug info
+    const memberships = await FamilyMember.findAll({
+      where: { userId: req.user.id },
+      include: [
+        {
+          model: Family,
+        },
+      ],
+      logging: console.log, // Log the actual SQL query
+    });
+
+    console.log("Found memberships count:", memberships.length);
+    console.log(
+      "First membership:",
+      memberships.length > 0
+        ? JSON.stringify(
+            {
+              id: memberships[0].id,
+              familyId: memberships[0].familyId,
+              hasFamily: !!memberships[0].Family,
+            },
+            null,
+            2
+          )
+        : "None"
+    );
+
+    // Extract the family data (with careful error handling)
+    const families = [];
+    for (const membership of memberships) {
+      if (membership.Family) {
+        families.push({
+          ...membership.Family.dataValues,
+          userRole: membership.role,
+          userPermissions: membership.permissions,
+          joinedAt: membership.joinedAt,
+        });
+      } else {
+        console.log(
+          `Missing Family for membership ID ${membership.id}, familyId: ${membership.familyId}`
+        );
+      }
+    }
+
+    return res.json({
       success: true,
-      count: resultFamilies.length,
-      families: resultFamilies,
+      count: families.length,
+      families,
+      debug: {
+        userID: req.user.id,
+        membershipCount,
+        membershipIds: memberships.map((m) => m.id),
+        familyIds: memberships.map((m) => m.familyId),
+      },
     });
   } catch (error) {
     console.error("Get families error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Server error",
       error: error.message,

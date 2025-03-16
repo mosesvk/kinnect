@@ -1,8 +1,7 @@
-// Improved Family.js model with proper associations
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
+const User = require('./User');
 
-// Define the Family model
 const Family = sequelize.define('Family', {
   id: {
     type: DataTypes.UUID,
@@ -38,13 +37,17 @@ const Family = sequelize.define('Family', {
     }
   }
 }, {
-  tableName: 'Families', // Explicitly set table name
   timestamps: true,
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-});
+  updatedAt: 'updatedAt',
+  hooks: {
+    beforeDestroy: async (family) => {
+      // Delete all family members when a family is deleted
+      await FamilyMember.destroy({ where: { familyId: family.id } });
+    }
+  }})
 
-// Define FamilyMember as a separate model
+// Define FamilyMember as a through table for User-Family relationship
 const FamilyMember = sequelize.define('FamilyMember', {
   id: {
     type: DataTypes.UUID,
@@ -53,16 +56,13 @@ const FamilyMember = sequelize.define('FamilyMember', {
   },
   familyId: {
     type: DataTypes.UUID,
-    allowNull: false,
     references: {
       model: 'Families',
       key: 'id'
-    },
-    onDelete: 'CASCADE' // Add cascade delete
+    }
   },
   userId: {
     type: DataTypes.UUID,
-    allowNull: false,
     references: {
       model: 'Users',
       key: 'id'
@@ -83,13 +83,16 @@ const FamilyMember = sequelize.define('FamilyMember', {
     allowNull: false,
     defaultValue: DataTypes.NOW
   }
-}, {
-  tableName: 'FamilyMembers', // Explicitly set table name
-  timestamps: true
 });
 
-// Important: Export the models first, then define associations
-module.exports = { Family, FamilyMember };
+// Define the relationships
+User.belongsToMany(Family, { through: FamilyMember, foreignKey: 'userId' });
+Family.belongsToMany(User, { through: FamilyMember, foreignKey: 'familyId' });
 
-// The associations should be defined in a separate file (like models/index.js)
-// after all models have been loaded to avoid circular dependencies
+Family.hasMany(FamilyMember);
+FamilyMember.belongsTo(Family);
+
+User.hasMany(FamilyMember);
+FamilyMember.belongsTo(User);
+
+module.exports = { Family, FamilyMember };

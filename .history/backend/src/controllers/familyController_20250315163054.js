@@ -77,20 +77,14 @@ exports.getUserFamilies = async (req, res) => {
         fm."userId" = :userId
     `;
 
-    // Get all results as an array
-    const families = await sequelize.query(query, {
+    const [families] = await sequelize.query(query, {
       replacements: { userId: req.user.id },
       type: sequelize.QueryTypes.SELECT,
     });
 
-    // Add explicit check and logging for the families array
-    if (families && Array.isArray(families)) {
-      console.log(`Found ${families.length} families for user`);
-    } else {
-      console.log("Query returned a non-array result:", families);
-      // Ensure we have a valid array even if something unexpected happened
-      families = Array.isArray(families) ? families : [];
-    }
+    console.log(
+      `Found ${Array.isArray(families) ? families.length : "unknown"} families`
+    );
 
     // Transform the result to match the expected format
     const resultFamilies = Array.isArray(families)

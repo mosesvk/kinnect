@@ -54,9 +54,9 @@ exports.createFamily = async (req, res) => {
 // @access  Private
 exports.getUserFamilies = async (req, res) => {
   try {
-    console.log("Getting families for user ID:", req.user.id);
-
-    // Since we have association issues, let's use a direct query approach instead
+    console.log('Getting families for user ID:', req.user.id);
+    
+    // Use a direct query approach to get all family data
     const query = `
       SELECT 
         f.id, 
@@ -76,38 +76,33 @@ exports.getUserFamilies = async (req, res) => {
       WHERE 
         fm."userId" = :userId
     `;
-
+    
     // Get all results as an array
     const families = await sequelize.query(query, {
       replacements: { userId: req.user.id },
-      type: sequelize.QueryTypes.SELECT,
+      type: sequelize.QueryTypes.SELECT
     });
-
+    
     // Add explicit check and logging for the families array
     if (families && Array.isArray(families)) {
       console.log(`Found ${families.length} families for user`);
     } else {
-      console.log("Query returned a non-array result:", families);
+      console.log('Query returned a non-array result:', families);
       // Ensure we have a valid array even if something unexpected happened
       families = Array.isArray(families) ? families : [];
     }
-
-    // Transform the result to match the expected format
-    const resultFamilies = Array.isArray(families)
-      ? families
-      : [families].filter((f) => f && f.id);
-
+    
     res.json({
       success: true,
-      count: resultFamilies.length,
-      families: resultFamilies,
+      count: families.length,
+      families: families
     });
   } catch (error) {
-    console.error("Get families error:", error);
+    console.error('Get families error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
