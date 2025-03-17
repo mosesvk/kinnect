@@ -24,8 +24,8 @@ describe("User Validations Integration Tests", () => {
       const validData = {
         firstName: "Updated",
         lastName: "User",
-        email: "test@example.com",
-        password: "password123",
+        email: "updated@example.com",
+        password: "newpassword123",
         dateOfBirth: "1990-01-01",
         phone: "+15551234567",
         address: {}, // Try with an empty object first
