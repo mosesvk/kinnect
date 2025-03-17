@@ -192,7 +192,7 @@ describe("Family Validations Integration Tests", () => {
         permissions: ["view", "edit"],
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(validData);
 
@@ -207,7 +207,7 @@ describe("Family Validations Integration Tests", () => {
         role: "member",
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(invalidData);
 
@@ -227,7 +227,7 @@ describe("Family Validations Integration Tests", () => {
         role: "invalid-role",
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(invalidData);
 
@@ -248,7 +248,7 @@ describe("Family Validations Integration Tests", () => {
         permissions: "view", // String instead of array
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(invalidData);
 

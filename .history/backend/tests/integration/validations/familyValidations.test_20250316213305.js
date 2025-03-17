@@ -87,7 +87,7 @@ app.post(
 
 describe("Family Validations Integration Tests", () => {
   // Create a test app with all validations
-  const testApp = createValidationTestApp({
+  const app = createValidationTestApp({
     "family-create": validateFamilyCreation,
     "family-update": validateFamilyUpdate,
     "family-member-add": validateFamilyMemberAddition,
@@ -103,7 +103,7 @@ describe("Family Validations Integration Tests", () => {
         },
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-create")
         .send(validData);
 
@@ -117,7 +117,7 @@ describe("Family Validations Integration Tests", () => {
         description: "A family for testing",
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-create")
         .send(invalidData);
 
@@ -131,7 +131,71 @@ describe("Family Validations Integration Tests", () => {
       );
     });
 
-    // Other tests remain unchanged
+    it("should fail validation when name is too short", async () => {
+      const invalidData = {
+        name: "A", // Too short (less than 2 characters)
+        description: "A family for testing",
+      };
+
+      const response = await request(app)
+        .post("/test/family-create")
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errors).toContainEqual(
+        expect.objectContaining({
+          field: "name",
+          message: "Family name must be between 2 and 100 characters",
+        })
+      );
+    });
+
+    it("should fail validation when description is too long", async () => {
+      // Create a description that's over 500 characters
+      const longDescription = "A".repeat(501);
+
+      const invalidData = {
+        name: "Test Family",
+        description: longDescription,
+      };
+
+      const response = await request(app)
+        .post("/test/family-create")
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errors).toContainEqual(
+        expect.objectContaining({
+          field: "description",
+          message: "Description cannot exceed 500 characters",
+        })
+      );
+    });
+
+    it("should fail validation when privacy level is invalid", async () => {
+      const invalidData = {
+        name: "Test Family",
+        description: "A family for testing",
+        settings: {
+          privacyLevel: "invalid-level",
+        },
+      };
+
+      const response = await request(app)
+        .post("/test/family-create")
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errors).toContainEqual(
+        expect.objectContaining({
+          field: "settings.privacyLevel",
+          message: "Privacy level must be private, public, or friends",
+        })
+      );
+    });
   });
   
   describe("Family Update Validation", () => {
@@ -141,8 +205,8 @@ describe("Family Validations Integration Tests", () => {
         description: "Updated description",
       };
 
-      const response = await request(testApp)
-        .post("/test/family-update")  // Changed from PUT to POST to match helper
+      const response = await request(app)
+        .put("/test/family-update")
         .send(validData);
 
       expect(response.status).toBe(200);
@@ -155,8 +219,8 @@ describe("Family Validations Integration Tests", () => {
         name: "Only Update Name",
       };
 
-      const response = await request(testApp)
-        .post("/test/family-update")  // Changed from PUT to POST
+      const response = await request(app)
+        .put("/test/family-update")
         .send(validData);
 
       expect(response.status).toBe(200);
@@ -169,8 +233,8 @@ describe("Family Validations Integration Tests", () => {
         name: "",
       };
 
-      const response = await request(testApp)
-        .post("/test/family-update")  // Changed from PUT to POST
+      const response = await request(app)
+        .put("/test/family-update")
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -192,7 +256,7 @@ describe("Family Validations Integration Tests", () => {
         permissions: ["view", "edit"],
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(validData);
 
@@ -207,7 +271,7 @@ describe("Family Validations Integration Tests", () => {
         role: "member",
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(invalidData);
 
@@ -227,7 +291,7 @@ describe("Family Validations Integration Tests", () => {
         role: "invalid-role",
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(invalidData);
 
@@ -248,7 +312,7 @@ describe("Family Validations Integration Tests", () => {
         permissions: "view", // String instead of array
       };
 
-      const response = await request(testApp)
+      const response = await request(app)
         .post("/test/family-member-add")
         .send(invalidData);
 
