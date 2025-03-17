@@ -88,31 +88,31 @@ exports.getUserFamilies = async (req, res) => {
     // Execute the query
     const [results] = await sequelize.query(query, {
       replacements: { userId: req.user.id },
-      type: sequelize.QueryTypes.SELECT,
+      type: sequelize.QueryTypes.SELECT
     });
 
-    // Ensure we have a valid array of families
-    let families = Array.isArray(results) ? results : [];
-
-    // If results is a single object but not an array, put it in an array
-    if (results && typeof results === "object" && !Array.isArray(results)) {
-      families = [results];
-    }
-
+// Ensure we have a valid array of families
+let families = Array.isArray(results) ? results : [];
+    
+// If results is a single object but not an array, put it in an array
+if (results && typeof results === 'object' && !Array.isArray(results)) {
+  families = [results];
+}
+    
     console.log(`Found ${families.length} families for user`);
 
     // Return a properly formatted response
     res.json({
       success: true,
       count: families.length,
-      families: families,
+      families: families
     });
   } catch (error) {
     console.error("Get families error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message,
+      error: error.message
     });
   }
 };
@@ -141,13 +141,7 @@ exports.getFamilyById = async (req, res) => {
           include: [
             {
               model: User,
-              attributes: [
-                "id",
-                "firstName",
-                "lastName",
-                "email",
-                "profileImage",
-              ],
+              attributes: ["id", "firstName", "lastName", "email", "profileImage"],
             },
           ],
         },
@@ -421,15 +415,13 @@ exports.removeFamilyMember = async (req, res) => {
     });
   } catch (error) {
     // Catch Sequelize database errors related to invalid UUIDs
-    if (
-      error.name === "SequelizeDatabaseError" &&
-      error.parent &&
-      error.parent.code === "22P02" &&
-      error.parent.routine === "string_to_uuid"
-    ) {
+    if (error.name === 'SequelizeDatabaseError' && 
+        error.parent && 
+        error.parent.code === '22P02' && 
+        error.parent.routine === 'string_to_uuid') {
       return res.status(404).json({
         success: false,
-        message: "User is not a member of this family",
+        message: "User is not a member of this family"
       });
     }
 
@@ -448,12 +440,12 @@ exports.removeFamilyMember = async (req, res) => {
 exports.deleteFamily = async (req, res) => {
   try {
     const familyId = req.params.id;
-
+    
     // Validate UUID format
     if (!isValidUUID(familyId)) {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: "Family not found"
       });
     }
 
@@ -463,7 +455,7 @@ exports.deleteFamily = async (req, res) => {
     if (!family) {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: "Family not found"
       });
     }
 
@@ -471,13 +463,13 @@ exports.deleteFamily = async (req, res) => {
     if (family.createdBy !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: "Only the family creator can delete it",
+        message: "Only the family creator can delete it"
       });
     }
 
     // Delete all family members first
     await FamilyMember.destroy({
-      where: { familyId },
+      where: { familyId }
     });
 
     // Delete the family
@@ -485,19 +477,17 @@ exports.deleteFamily = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Family deleted successfully",
+      message: "Family deleted successfully"
     });
   } catch (error) {
     // Catch Sequelize database errors related to invalid UUIDs
-    if (
-      error.name === "SequelizeDatabaseError" &&
-      error.parent &&
-      error.parent.code === "22P02" &&
-      error.parent.routine === "string_to_uuid"
-    ) {
+    if (error.name === 'SequelizeDatabaseError' && 
+        error.parent && 
+        error.parent.code === '22P02' && 
+        error.parent.routine === 'string_to_uuid') {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: "Family not found"
       });
     }
 
@@ -505,7 +495,7 @@ exports.deleteFamily = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message,
+      error: error.message
     });
   }
 };

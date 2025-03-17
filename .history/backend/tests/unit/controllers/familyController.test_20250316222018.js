@@ -1,33 +1,33 @@
-// First, mock the dependencies before any imports
-// This is critical because Jest hoists mock declarations
-jest.mock('../../../src/models/Family', () => ({
+// Import the controller directly, but we'll mock its dependencies
+const familyController = require('../../../src/controllers/familyController');
+
+// Create mocks for the dependencies
+const mockFamily = {
   create: jest.fn(),
   findByPk: jest.fn(),
-}));
+};
 
-jest.mock('../../../src/models/FamilyMember', () => ({
+const mockFamilyMember = {
   create: jest.fn(),
   findOne: jest.fn(),
   destroy: jest.fn(),
-}));
+};
 
-jest.mock('../../../src/models/User', () => ({
+const mockUser = {
   findOne: jest.fn(),
-}));
+};
 
+const mockSequelize = {
+  query: jest.fn(),
+};
+
+// Mock the dependencies
+jest.mock('../../../src/models/Family', () => mockFamily);
+jest.mock('../../../src/models/FamilyMember', () => mockFamilyMember);
+jest.mock('../../../src/models/User', () => mockUser);
 jest.mock('../../../src/config/db', () => ({
-  sequelize: {
-    query: jest.fn(),
-    QueryTypes: { SELECT: 'SELECT' },
-  },
+  sequelize: mockSequelize,
 }));
-
-// NOW import the controller and models
-const Family = require('../../../src/models/Family');
-const FamilyMember = require('../../../src/models/FamilyMember');
-const User = require('../../../src/models/User');
-const { sequelize } = require('../../../src/config/db');
-const familyController = require('../../../src/controllers/familyController');
 
 describe('Family Controller', () => {
   // Create a standard response mock
@@ -62,20 +62,20 @@ describe('Family Controller', () => {
         description: 'Test description',
       };
       
-      Family.create.mockResolvedValueOnce(mockCreatedFamily);
-      FamilyMember.create.mockResolvedValueOnce({ id: 'member123' });
+      mockFamily.create.mockResolvedValueOnce(mockCreatedFamily);
+      mockFamilyMember.create.mockResolvedValueOnce({ id: 'member123' });
       
       // Call the controller
       await familyController.createFamily(req, res);
       
       // Assertions
-      expect(Family.create).toHaveBeenCalledWith({
+      expect(mockFamily.create).toHaveBeenCalledWith({
         name: 'Test Family',
         description: 'Test description',
         createdBy: 'user123',
       });
       
-      expect(FamilyMember.create).toHaveBeenCalledWith({
+      expect(mockFamilyMember.create).toHaveBeenCalledWith({
         familyId: 'family123',
         userId: 'user123',
         role: 'admin',
@@ -107,7 +107,7 @@ describe('Family Controller', () => {
         success: false,
         message: 'Please provide a family name',
       });
-      expect(Family.create).not.toHaveBeenCalled();
+      expect(mockFamily.create).not.toHaveBeenCalled();
     });
   });
   
@@ -124,13 +124,13 @@ describe('Family Controller', () => {
         { id: 'family2', name: 'Family 2' },
       ];
       
-      sequelize.query.mockResolvedValueOnce([mockFamilies]);
+      mockSequelize.query.mockResolvedValueOnce([mockFamilies]);
       
       // Call the controller
       await familyController.getUserFamilies(req, res);
       
       // Assertions
-      expect(sequelize.query).toHaveBeenCalled();
+      expect(mockSequelize.query).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         count: 2,
