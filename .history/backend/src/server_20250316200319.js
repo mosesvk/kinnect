@@ -9,7 +9,6 @@ const familyPostRoutes = require('./routes/familyPostRoutes');
 const eventPostRoutes = require('./routes/eventPostRoutes');
 const postRoutes = require('./routes/postRoutes');
 const mediaRoutes = require('./routes/mediaRoutes')
-const familyMediaRoutes = require('./routes/familyMediaRoutes')
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const cors = require("cors");
 const helmet = require("helmet");
