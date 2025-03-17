@@ -1,14 +1,13 @@
 // controllers/familyController.js
 const Family = require("../models/Family");
-const FamilyMember = require("../models/FamilyMember");
+const FamilyMember = require('../models/FamilyMember')
 const User = require("../models/User");
 const { sequelize } = require("../config/db");
 const { Op } = require("sequelize");
 
 // Helper function to validate UUID format
 const isValidUUID = (uuid) => {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 };
 
@@ -105,7 +104,7 @@ exports.getUserFamilies = async (req, res) => {
     res.json({
       success: true,
       count: families.length,
-      families: families,
+      families: families
     });
   } catch (error) {
     console.error("Get families error:", error);
@@ -123,12 +122,12 @@ exports.getUserFamilies = async (req, res) => {
 exports.getFamilyById = async (req, res) => {
   try {
     const familyId = req.params.id;
-
+    
     // Validate UUID format
     if (!isValidUUID(familyId)) {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: "Family not found"
       });
     }
 
@@ -136,14 +135,14 @@ exports.getFamilyById = async (req, res) => {
     const membership = await FamilyMember.findOne({
       where: {
         familyId,
-        userId: req.user.id,
-      },
+        userId: req.user.id
+      }
     });
 
     if (!membership) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to access this family",
+        message: "Not authorized to access this family"
       });
     }
 
@@ -151,15 +150,13 @@ exports.getFamilyById = async (req, res) => {
     // Rest of your existing code
   } catch (error) {
     // Catch Sequelize database errors related to invalid UUIDs
-    if (
-      error.name === "SequelizeDatabaseError" &&
-      error.parent &&
-      error.parent.code === "22P02" &&
-      error.parent.routine === "string_to_uuid"
-    ) {
+    if (error.name === 'SequelizeDatabaseError' && 
+        error.parent && 
+        error.parent.code === '22P02' && 
+        error.parent.routine === 'string_to_uuid') {
       return res.status(404).json({
         success: false,
-        message: "Family not found",
+        message: "Family not found"
       });
     }
 
@@ -167,11 +164,10 @@ exports.getFamilyById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message,
+      error: error.message
     });
   }
 };
-
 // @desc    Update family details
 // @route   PUT /api/families/:id
 // @access  Private (Admin/Creator)
@@ -313,30 +309,49 @@ exports.addFamilyMember = async (req, res) => {
 exports.removeFamilyMember = async (req, res) => {
   try {
     const { id: familyId, userId } = req.params;
-
+    
     // Validate UUID format
-    if (!isValidUUID(familyId) || !isValidUUID(userId)) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(familyId) || !uuidRegex.test(userId)) {
       return res.status(404).json({
         success: false,
         message: "User is not a member of this family",
       });
     }
 
-    // Rest of your existing code
+    // Check if user has admin permissions
+    const adminMembership = await FamilyMember.findOne({
+      where: {
+        familyId,
+        userId: req.user.id,
+        role: "admin",
+      },
+    });
+
+    if (!adminMembership) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to remove members from this family",
+      });
+    }
+
+    // Find the membership to remove
+    const membershipToRemove = await FamilyMember.findOne({
+      where: {
+        familyId,
+        userId,
+      },
+    });
+
+    if (!membershipToRemove) {
+      return res.status(404).json({
+        success: false,
+        message: "User is not a member of this family",
+      });
+    }
+
+    // Rest of the function...
   } catch (error) {
-    // Catch Sequelize database errors related to invalid UUIDs
-    if (
-      error.name === "SequelizeDatabaseError" &&
-      error.parent &&
-      error.parent.code === "22P02" &&
-      error.parent.routine === "string_to_uuid"
-    ) {
-      return res.status(404).json({
-        success: false,
-        message: "User is not a member of this family",
-      });
-    }
-
     console.error("Remove family member error:", error);
     res.status(500).json({
       success: false,
@@ -354,31 +369,39 @@ exports.deleteFamily = async (req, res) => {
     const familyId = req.params.id;
     
     // Validate UUID format
-    if (!isValidUUID(familyId)) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(familyId)) {
       return res.status(404).json({
         success: false,
-        message: "Family not found"
+        message: "Family not found",
       });
     }
 
-    // Rest of your existing code
+    // Get the family
+    const family = await Family.findByPk(familyId);
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        message: "Family not found",
+      });
+    }
+
+    // Only the creator can delete the family
+    if (family.createdBy !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the family creator can delete it",
+      });
+    }
+
+    // Rest of the function...
   } catch (error) {
-    // Catch Sequelize database errors related to invalid UUIDs
-    if (error.name === 'SequelizeDatabaseError' && 
-        error.parent && 
-        error.parent.code === '22P02' && 
-        error.parent.routine === 'string_to_uuid') {
-      return res.status(404).json({
-        success: false,
-        message: "Family not found"
-      });
-    }
-
     console.error("Delete family error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };

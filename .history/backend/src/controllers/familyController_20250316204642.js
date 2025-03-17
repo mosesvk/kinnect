@@ -1,16 +1,9 @@
 // controllers/familyController.js
 const Family = require("../models/Family");
-const FamilyMember = require("../models/FamilyMember");
+const FamilyMember = require('../models/FamilyMember')
 const User = require("../models/User");
 const { sequelize } = require("../config/db");
 const { Op } = require("sequelize");
-
-// Helper function to validate UUID format
-const isValidUUID = (uuid) => {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-};
 
 // @desc    Create a new family
 // @route   POST /api/families
@@ -105,7 +98,7 @@ exports.getUserFamilies = async (req, res) => {
     res.json({
       success: true,
       count: families.length,
-      families: families,
+      families: families
     });
   } catch (error) {
     console.error("Get families error:", error);
@@ -124,14 +117,6 @@ exports.getFamilyById = async (req, res) => {
   try {
     const familyId = req.params.id;
 
-    // Validate UUID format
-    if (!isValidUUID(familyId)) {
-      return res.status(404).json({
-        success: false,
-        message: "Family not found",
-      });
-    }
-
     // Check if user is a member of this family
     const membership = await FamilyMember.findOne({
       where: {
@@ -148,21 +133,41 @@ exports.getFamilyById = async (req, res) => {
     }
 
     // Get family with member details
-    // Rest of your existing code
-  } catch (error) {
-    // Catch Sequelize database errors related to invalid UUIDs
-    if (
-      error.name === "SequelizeDatabaseError" &&
-      error.parent &&
-      error.parent.code === "22P02" &&
-      error.parent.routine === "string_to_uuid"
-    ) {
+    const family = await Family.findByPk(familyId, {
+      include: [
+        {
+          model: FamilyMember,
+          as: "members",
+          include: [
+            {
+              model: User,
+              attributes: [
+                "id",
+                "firstName",
+                "lastName",
+                "email",
+                "profileImage",
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!family) {
       return res.status(404).json({
         success: false,
         message: "Family not found",
       });
     }
 
+    res.json({
+      success: true,
+      family,
+      userRole: membership.role,
+      userPermissions: membership.permissions,
+    });
+  } catch (error) {
     console.error("Get family error:", error);
     res.status(500).json({
       success: false,
@@ -314,29 +319,72 @@ exports.removeFamilyMember = async (req, res) => {
   try {
     const { id: familyId, userId } = req.params;
 
-    // Validate UUID format
-    if (!isValidUUID(familyId) || !isValidUUID(userId)) {
+    // Check if user has admin permissions
+    const adminMembership = await FamilyMember.findOne({
+      where: {
+        familyId,
+        userId: req.user.id,
+        role: "admin",
+      },
+    });
+
+    if (!adminMembership) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to remove members from this family",
+      });
+    }
+
+    // Find the membership to remove
+    const membershipToRemove = await FamilyMember.findOne({
+      where: {
+        familyId,
+        userId,
+      },
+    });
+
+    if (!membershipToRemove) {
       return res.status(404).json({
         success: false,
         message: "User is not a member of this family",
       });
     }
 
-    // Rest of your existing code
+    // Don't allow removing the creator/last admin
+    const family = await Family.findByPk(familyId);
+
+    if (family.createdBy === userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot remove the family creator",
+      });
+    }
+
+    // Count admins to ensure at least one remains
+    if (membershipToRemove.role === "admin") {
+      const adminCount = await FamilyMember.count({
+        where: {
+          familyId,
+          role: "admin",
+        },
+      });
+
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot remove the last admin from the family",
+        });
+      }
+    }
+
+    // Remove the membership
+    await membershipToRemove.destroy();
+
+    res.json({
+      success: true,
+      message: "Member removed successfully",
+    });
   } catch (error) {
-    // Catch Sequelize database errors related to invalid UUIDs
-    if (
-      error.name === "SequelizeDatabaseError" &&
-      error.parent &&
-      error.parent.code === "22P02" &&
-      error.parent.routine === "string_to_uuid"
-    ) {
-      return res.status(404).json({
-        success: false,
-        message: "User is not a member of this family",
-      });
-    }
-
     console.error("Remove family member error:", error);
     res.status(500).json({
       success: false,
@@ -352,33 +400,43 @@ exports.removeFamilyMember = async (req, res) => {
 exports.deleteFamily = async (req, res) => {
   try {
     const familyId = req.params.id;
-    
-    // Validate UUID format
-    if (!isValidUUID(familyId)) {
+
+    // Get the family
+    const family = await Family.findByPk(familyId);
+
+    if (!family) {
       return res.status(404).json({
         success: false,
-        message: "Family not found"
+        message: "Family not found",
       });
     }
 
-    // Rest of your existing code
+    // Only the creator can delete the family
+    if (family.createdBy !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the family creator can delete it",
+      });
+    }
+
+    // Delete all family members first (due to foreign key constraints)
+    await FamilyMember.destroy({
+      where: { familyId },
+    });
+
+    // Delete the family
+    await family.destroy();
+
+    res.json({
+      success: true,
+      message: "Family deleted successfully",
+    });
   } catch (error) {
-    // Catch Sequelize database errors related to invalid UUIDs
-    if (error.name === 'SequelizeDatabaseError' && 
-        error.parent && 
-        error.parent.code === '22P02' && 
-        error.parent.routine === 'string_to_uuid') {
-      return res.status(404).json({
-        success: false,
-        message: "Family not found"
-      });
-    }
-
     console.error("Delete family error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };

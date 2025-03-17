@@ -352,33 +352,42 @@ exports.removeFamilyMember = async (req, res) => {
 exports.deleteFamily = async (req, res) => {
   try {
     const familyId = req.params.id;
-    
+
     // Validate UUID format
-    if (!isValidUUID(familyId)) {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(familyId)) {
       return res.status(404).json({
         success: false,
-        message: "Family not found"
+        message: "Family not found",
       });
     }
 
-    // Rest of your existing code
+    // Get the family
+    const family = await Family.findByPk(familyId);
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        message: "Family not found",
+      });
+    }
+
+    // Only the creator can delete the family
+    if (family.createdBy !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the family creator can delete it",
+      });
+    }
+
+    // Rest of the function...
   } catch (error) {
-    // Catch Sequelize database errors related to invalid UUIDs
-    if (error.name === 'SequelizeDatabaseError' && 
-        error.parent && 
-        error.parent.code === '22P02' && 
-        error.parent.routine === 'string_to_uuid') {
-      return res.status(404).json({
-        success: false,
-        message: "Family not found"
-      });
-    }
-
     console.error("Delete family error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };

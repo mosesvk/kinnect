@@ -279,7 +279,6 @@ describe("Family Controller Unit Tests", () => {
       });
     });
   });
-  
   describe("getFamilyById", () => {
     it("should return a family by id if user is a member", async () => {
       // Mock request and response objects
