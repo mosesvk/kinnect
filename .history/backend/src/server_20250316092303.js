@@ -4,12 +4,6 @@ const { syncDatabase } = require("./models/Index");
 const dotenv = require("dotenv");
 const userRoutes = require("./routes/userRoutes");
 const familyRoutes = require("./routes/familyRoutes");
-const { familyEventRoutes, eventRoutes } = require("./routes/eventRoutes");
-const familyPostRoutes = require("./routes/familyPostRoutes");
-const eventPostRoutes = require("./routes/eventPostRoutes");
-const postRoutes = require("./routes/postRoutes");
-const mediaRoutes = require("./routes/mediaRoutes");
-const familyMediaRoutes = require("./routes/familyMediaRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -67,26 +61,8 @@ app.post("/api/test", (req, res) => {
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/families", familyRoutes);
-app.use("/api/events", eventRoutes);
-app.use("/api/posts", postRoutes);
-app.use("/api/media", mediaRoutes);
 
-// Nested routes with parameters
-app.use("/api/families/:familyId/events", familyEventRoutes);
-app.use("/api/families/:familyId/posts", familyPostRoutes);
-app.use("/api/families/:familyId/media", familyMediaRoutes);
-app.use("/api/events/:eventId/posts", eventPostRoutes);
-
-// Add parameter middleware for route parameters
-app.param("familyId", (req, res, next, id) => {
-  req.params.familyId = id;
-  next();
-});
-
-app.param("eventId", (req, res, next, id) => {
-  req.params.eventId = id;
-  next();
-});
+// Add other routes as needed
 
 // Error handling middleware
 app.use((req, res, next) => {
@@ -101,19 +77,6 @@ app.use((err, req, res, next) => {
     success: false,
     message: err.message,
     stack: process.env.NODE_ENV === "production" ? null : err.stack,
-  });
-});
-
-// Static file serving for uploads in development
-if (process.env.NODE_ENV !== "production") {
-  app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-}
-
-// 404 route
-app.use("/api/*", (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "API endpoint not found",
   });
 });
 
@@ -132,13 +95,13 @@ const start = async () => {
         `Server running in ${process.env.NODE_ENV} mode on port: ${PORT}`
       );
     });
-
+    
     return server; // Return the server instance for testing
   } catch (error) {
     console.error("Failed to start server:", error);
-
+    
     // Only exit the process in non-test environments
-    if (process.env.NODE_ENV !== "test") {
+    if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     } else {
       throw error; // Throw instead of exiting in test environment
@@ -147,7 +110,7 @@ const start = async () => {
 };
 
 // Only call start() if not in a testing environment or if explicitly required
-if (process.env.NODE_ENV !== "test" || process.env.FORCE_START === "true") {
+if (process.env.NODE_ENV !== 'test' || process.env.FORCE_START === 'true') {
   start();
 }
 
