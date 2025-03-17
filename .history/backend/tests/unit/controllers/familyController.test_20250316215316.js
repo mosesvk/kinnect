@@ -488,7 +488,6 @@ describe("Family Controller Unit Tests", () => {
         family: mockFamily,
       });
     });
-  })
 
   describe("addFamilyMember", () => {
     it("should add a member to the family", async () => {
@@ -1064,4 +1063,4 @@ describe("Family Controller Unit Tests", () => {
       });
     });
   });
-})
+});

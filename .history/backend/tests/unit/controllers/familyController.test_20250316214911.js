@@ -1,3 +1,15 @@
+const createMockResponse = () => {
+  const res = {};
+
+  // Mock the status method to return the res object for chaining
+  res.status = jest.fn().mockReturnValue(res);
+
+  // Mock the json method
+  res.json = jest.fn().mockReturnValue(res);
+
+  return res;
+};
+
 // Mock the models and database functions
 jest.mock("../../../src/models/Family", () => {
   return {
@@ -46,90 +58,54 @@ const FamilyMember = require("../../../src/models/FamilyMember");
 const User = require("../../../src/models/User");
 const { sequelize } = require("../../../src/config/db");
 
-// Helper function to create a properly mocked response object
-const createMockResponse = () => {
-  const res = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  return res;
-};
-
 describe("Family Controller Unit Tests", () => {
   // Reset mocks before each test
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Set up consistent mock implementations
     FamilyMember.findOne.mockImplementation(({ where }) => {
       // For admin permission check
-      if (where && where.familyId === "family-123" && where.userId === "user-123" && where.role === "admin") {
+      if (
+        where &&
+        where.familyId === "family-123" &&
+        where.userId === "user-123" &&
+        where.role === "admin"
+      ) {
         return Promise.resolve({
           id: "member-123",
           familyId: "family-123",
           userId: "user-123",
           role: "admin",
-          permissions: ["view", "edit", "delete", "invite"]
+          permissions: ["view", "edit", "delete", "invite"],
         });
       }
-      
+
       // For membership check (without role)
-      if (where && where.familyId === "family-123" && where.userId === "user-123" && !where.role) {
+      if (
+        where &&
+        where.familyId === "family-123" &&
+        where.userId === "user-123" &&
+        !where.role
+      ) {
         return Promise.resolve({
           id: "member-123",
           familyId: "family-123",
           userId: "user-123",
           role: "admin",
-          permissions: ["view", "edit", "delete", "invite"]
+          permissions: ["view", "edit", "delete", "invite"],
         });
       }
-      
+
       // For non-admin users or non-members
-      if ((where && where.userId !== "user-123") || (where && where.familyId !== "family-123")) {
+      if (
+        (where && where.userId !== "user-123") ||
+        (where && where.familyId !== "family-123")
+      ) {
         return Promise.resolve(null);
       }
-      
+
       return Promise.resolve(null);
-    });
-    
-    // Fix sequelize.query mock for getUserFamilies
-    sequelize.query.mockImplementation((query, options) => {
-      if (query.includes('FROM "Families" f') && options.replacements && options.replacements.userId) {
-        const userId = options.replacements.userId;
-        
-        if (userId === 'user-123') {
-          // Return test families data
-          return Promise.resolve([
-            [
-              {
-                id: 'family-123',
-                name: 'Test Family 1',
-                description: 'Family for testing',
-                createdBy: 'user-123',
-                settings: { privacyLevel: 'private' },
-                userRole: 'admin',
-                userPermissions: ['view', 'edit', 'delete', 'invite'],
-                joinedAt: new Date().toISOString()
-              },
-              {
-                id: 'family-456',
-                name: 'Test Family 2',
-                description: 'Another family for testing',
-                createdBy: 'user-456',
-                settings: { privacyLevel: 'private' },
-                userRole: 'member',
-                userPermissions: ['view'],
-                joinedAt: new Date().toISOString()
-              }
-            ]
-          ]);
-        } else {
-          // Return empty results for other users
-          return Promise.resolve([[]]);
-        }
-      }
-      
-      // Default return empty results
-      return Promise.resolve([[]]);
     });
   });
 
@@ -145,7 +121,10 @@ describe("Family Controller Unit Tests", () => {
         user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
 
       // Mock the Family.create and FamilyMember.create methods
       const createdFamily = {
@@ -198,7 +177,10 @@ describe("Family Controller Unit Tests", () => {
         user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
 
       // Call the function
       await createFamily(req, res);
@@ -221,7 +203,10 @@ describe("Family Controller Unit Tests", () => {
         user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
 
       // Mock the error
       const error = new Error("Database error");
@@ -240,77 +225,116 @@ describe("Family Controller Unit Tests", () => {
     });
   });
 
-  describe('getUserFamilies', () => {
-    it('should get all families for the user', async () => {
+  describe("getUserFamilies", () => {
+    it("should get all families for the user", async () => {
       // Mock request and response objects
       const req = {
-        user: { id: 'user-123' }
+        user: { id: "user-123" },
       };
-      
-      const res = createMockResponse();
-  
+
+      const res = {
+        json: jest.fn(),
+      };
+
+      // Mock the sequelize query response
+      const mockFamilies = [
+        {
+          id: "family-123",
+          name: "Test Family 1",
+          userRole: "admin",
+        },
+        {
+          id: "family-456",
+          name: "Test Family 2",
+          userRole: "member",
+        },
+      ];
+
+      // Change this line - return mockFamilies directly instead of in an array
+      sequelize.query.mockResolvedValue([mockFamilies]);
+
+      // Update the controller code to handle the response format correctly
+      // This is a mock implementation that matches how your controller handles the query results
+      jest.spyOn(Array, "isArray").mockImplementation((arg) => {
+        // Ensure it properly detects arrays in the test environment
+        return arg && typeof arg === "object" && arg.constructor === Array;
+      });
+
       // Call the function
       await getUserFamilies(req, res);
-  
+
       // Assertions
       expect(sequelize.query).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         count: 2,
-        families: expect.any(Array)
+        families: mockFamilies,
       });
-      
-      // Verify the response contains the expected families
-      const responseData = res.json.mock.calls[0][0];
-      expect(responseData.families.length).toBe(2);
-      expect(responseData.families[0].id).toBe('family-123');
-      expect(responseData.families[1].id).toBe('family-456');
+
+      // Restore original implementation
+      Array.isArray.mockRestore();
     });
-  
-    it('should handle empty results', async () => {
+
+    it("should handle empty results", async () => {
       // Mock request and response objects
       const req = {
-        user: { id: 'user-456' } // Different user that has no families
+        user: { id: "user-123" },
       };
-      
-      const res = createMockResponse();
-  
+
+      const res = {
+        json: jest.fn(),
+      };
+
+      // Mock empty query response - return empty array directly
+      sequelize.query.mockResolvedValue([[]]);
+
+      // Mock implementation for array check
+      jest.spyOn(Array, "isArray").mockImplementation((arg) => {
+        return arg && typeof arg === "object" && arg.constructor === Array;
+      });
+
       // Call the function
       await getUserFamilies(req, res);
-  
+
       // Assertions
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         count: 0,
-        families: []
+        families: [],
       });
+
+      // Restore original implementation
+      Array.isArray.mockRestore();
     });
-  
-    it('should handle server errors', async () => {
+
+    it("should handle server errors", async () => {
       // Mock request and response objects
       const req = {
-        user: { id: 'user-123' }
+        user: { id: "user-123" },
       };
-      
-      const res = createMockResponse();
-  
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
       // Mock query error
-      const error = new Error('Database error');
+      const error = new Error("Database error");
       sequelize.query.mockRejectedValue(error);
-  
+
       // Call the function
       await getUserFamilies(req, res);
-  
+
       // Assertions
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Server error',
-        error: 'Database error'
+        message: "Server error",
+        error: "Database error",
       });
     });
   });
-  
+
   describe("getFamilyById", () => {
     it("should return a family by id if user is a member", async () => {
       // Mock request and response objects
@@ -319,9 +343,16 @@ describe("Family Controller Unit Tests", () => {
         user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
+      const res = {
+        json: jest.fn(),
+      };
 
-      // Mock Family.findByPk
+      // Mock FamilyMember.findOne and Family.findByPk
+      const membership = {
+        role: "admin",
+        permissions: ["view", "edit", "delete", "invite"],
+      };
+
       const family = {
         id: "family-123",
         name: "Test Family",
@@ -329,6 +360,7 @@ describe("Family Controller Unit Tests", () => {
         members: [{ userId: "user-123", role: "admin" }],
       };
 
+      FamilyMember.findOne.mockResolvedValue(membership);
       Family.findByPk.mockResolvedValue(family);
 
       // Call the function
@@ -356,24 +388,19 @@ describe("Family Controller Unit Tests", () => {
     });
 
     it("should return 403 if user is not a member of the family", async () => {
-      // Override the default mock for this specific test
-      FamilyMember.findOne.mockResolvedValueOnce(null);
-      
       // Mock request and response objects
       const req = {
         params: { id: "family-123" },
-        user: { id: "user-456" },  // Different user
+        user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
-
-      // Mock Family.findByPk
-      const family = {
-        id: "family-123",
-        name: "Test Family",
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
       };
 
-      Family.findByPk.mockResolvedValue(family);
+      // Mock FamilyMember.findOne to return null (user not a member)
+      FamilyMember.findOne.mockResolvedValue(null);
 
       // Call the function
       await getFamilyById(req, res);
@@ -384,18 +411,23 @@ describe("Family Controller Unit Tests", () => {
         success: false,
         message: "Not authorized to access this family",
       });
+      expect(Family.findByPk).not.toHaveBeenCalled();
     });
 
     it("should return 404 if family is not found", async () => {
       // Mock request and response objects
       const req = {
-        params: { id: "nonexistent-family" },
+        params: { id: "family-123" },
         user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
 
-      // Mock Family.findByPk to return null
+      // Mock FamilyMember.findOne and Family.findByPk
+      FamilyMember.findOne.mockResolvedValue({ role: "member" });
       Family.findByPk.mockResolvedValue(null);
 
       // Call the function
@@ -416,11 +448,14 @@ describe("Family Controller Unit Tests", () => {
         user: { id: "user-123" },
       };
 
-      const res = createMockResponse();
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
 
       // Mock error
       const error = new Error("Database error");
-      Family.findByPk.mockRejectedValue(error);
+      FamilyMember.findOne.mockRejectedValue(error);
 
       // Call the function
       await getFamilyById(req, res);
@@ -435,10 +470,6 @@ describe("Family Controller Unit Tests", () => {
     });
   });
 
-  // Add other test cases following the same pattern...
-  // updateFamily, addFamilyMember, removeFamilyMember, and deleteFamily
-  
-  // Example for updateFamily:
   describe("updateFamily", () => {
     it("should update a family if user is an admin", async () => {
       // Mock request and response objects
@@ -451,9 +482,15 @@ describe("Family Controller Unit Tests", () => {
         },
       };
 
-      const res = createMockResponse();
+      const res = {
+        json: jest.fn(),
+      };
 
-      // Mock Family.findByPk
+      // Mock FamilyMember.findOne and Family.findByPk
+      FamilyMember.findOne.mockResolvedValue({
+        role: "admin",
+      });
+
       const mockFamily = {
         id: "family-123",
         name: "Test Family",
@@ -488,7 +525,98 @@ describe("Family Controller Unit Tests", () => {
         family: mockFamily,
       });
     });
-  })
+
+    it("should return 403 if user is not an admin", async () => {
+      // Mock request and response objects
+      const req = {
+        params: { id: "family-123" },
+        user: { id: "user-123" },
+        body: {
+          name: "Updated Family Name",
+        },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      // Mock FamilyMember.findOne to return null (not an admin)
+      FamilyMember.findOne.mockResolvedValue(null);
+
+      // Call the function
+      await updateFamily(req, res);
+
+      // Assertions
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Not authorized to update this family",
+      });
+      expect(Family.findByPk).not.toHaveBeenCalled();
+    });
+
+    it("should return 404 if family is not found", async () => {
+      // Mock request and response objects
+      const req = {
+        params: { id: "family-123" },
+        user: { id: "user-123" },
+        body: {
+          name: "Updated Family Name",
+        },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      // Mock FamilyMember.findOne and Family.findByPk
+      FamilyMember.findOne.mockResolvedValue({ role: "admin" });
+      Family.findByPk.mockResolvedValue(null);
+
+      // Call the function
+      await updateFamily(req, res);
+
+      // Assertions
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Family not found",
+      });
+    });
+
+    it("should handle server errors", async () => {
+      // Mock request and response objects
+      const req = {
+        params: { id: "family-123" },
+        user: { id: "user-123" },
+        body: {
+          name: "Updated Family Name",
+        },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      // Mock error
+      const error = new Error("Database error");
+      FamilyMember.findOne.mockRejectedValue(error);
+
+      // Call the function
+      await updateFamily(req, res);
+
+      // Assertions
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Server error",
+        error: "Database error",
+      });
+    });
+  });
 
   describe("addFamilyMember", () => {
     it("should add a member to the family", async () => {
@@ -1064,4 +1192,4 @@ describe("Family Controller Unit Tests", () => {
       });
     });
   });
-})
+});
