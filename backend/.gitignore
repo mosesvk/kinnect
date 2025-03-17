@@ -4,11 +4,11 @@ package-lock.json
 
 # Environment variables
 .env
+.env.*
 .env.local
 .env.*.local
 .env.development
 .env.test
 .env.production
-.history/
 
 .history/
