@@ -74,7 +74,6 @@ app.use('/api/families/:familyId/events', familyEventRoutes);
 app.use('/api/families/:familyId/posts', familyPostRoutes);
 app.use('/api/families/:familyId/media', familyMediaRoutes);
 app.use('/api/events/:eventId/posts', eventPostRoutes);
-
 // Add parameter middleware for route parameters
 app.param('familyId', (req, res, next, id) => {
   req.params.familyId = id;
