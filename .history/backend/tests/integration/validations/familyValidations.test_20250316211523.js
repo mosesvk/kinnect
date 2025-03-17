@@ -87,9 +87,9 @@ app.post(
 describe("Family Validations Integration Tests", () => {
   // Create a test app with all validations
   const app = createValidationTestApp({
-    "family-create": validateFamilyCreation,
-    "family-update": validateFamilyUpdate,
-    "family-member-add": validateFamilyMemberAddition,
+    'family-create': validateFamilyCreation,
+    'family-update': validateFamilyUpdate,
+    'family-member-add': validateFamilyMemberAddition
   });
 
   describe("Family Creation Validation", () => {
@@ -196,7 +196,6 @@ describe("Family Validations Integration Tests", () => {
       );
     });
   });
-  
   describe("Family Update Validation", () => {
     it("should pass validation with valid update data", async () => {
       const validData = {

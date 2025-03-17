@@ -455,36 +455,7 @@ exports.deleteFamily = async (req, res) => {
       });
     }
 
-    // Get the family
-    const family = await Family.findByPk(familyId);
-
-    if (!family) {
-      return res.status(404).json({
-        success: false,
-        message: "Family not found"
-      });
-    }
-
-    // Check if user is the creator
-    if (family.createdBy !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the family creator can delete it"
-      });
-    }
-
-    // Delete all family members first
-    await FamilyMember.destroy({
-      where: { familyId }
-    });
-
-    // Delete the family
-    await family.destroy();
-
-    res.json({
-      success: true,
-      message: "Family deleted successfully"
-    });
+    // Rest of your existing code
   } catch (error) {
     // Catch Sequelize database errors related to invalid UUIDs
     if (error.name === 'SequelizeDatabaseError' && 
