@@ -63,26 +63,10 @@ app.post("/api/test", (req, res) => {
 });
 
 // API routes
-app.use('/api/users', userRoutes);
-app.use('/api/families', familyRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/posts', postRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/families", familyRoutes);
 
-// Nested routes
-app.use('/api/families/:familyId/events', familyEventRoutes);
-app.use('/api/families/:familyId/posts', familyPostRoutes);
-app.use('/api/events/:eventId/posts', eventPostRoutes);
-
-// Add parameter middleware for route parameters
-app.param('familyId', (req, res, next, id) => {
-  req.params.familyId = id;
-  next();
-});
-
-app.param('eventId', (req, res, next, id) => {
-  req.params.eventId = id;
-  next();
-});
+// Add other routes as needed
 
 // Error handling middleware
 app.use((req, res, next) => {
