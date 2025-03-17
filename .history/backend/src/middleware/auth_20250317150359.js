@@ -1,4 +1,3 @@
-// src/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -12,15 +11,8 @@ exports.protect = async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: 'Not authorized, no token'
-        });
-      }
-
       // Verify token
-      const secret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? 'test-secret-key' : undefined);
+      const secret = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'test-secret-key' : undefined);
       
       if (!secret) {
         throw new Error('JWT_SECRET environment variable is not set');
@@ -45,7 +37,7 @@ exports.protect = async (req, res, next) => {
         message: 'Not authorized, token failed'
       });
     }
-  } else {
+  } else if (!token) {
     res.status(401).json({
       success: false,
       message: 'Not authorized, no token'

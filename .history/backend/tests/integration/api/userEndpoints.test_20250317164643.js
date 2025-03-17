@@ -7,10 +7,6 @@ const User = require('../../../src/models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../../../src/utils/jwt', () => ({
-  generateToken: jest.fn().mockReturnValue('test-token')
-}));
-
 jest.setTimeout(30000);
 
 describe('User API Endpoints', () => {

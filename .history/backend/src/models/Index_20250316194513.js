@@ -1,4 +1,4 @@
-// src/models/Index.js - Updated with additional associations
+// src/models/Index.js - Updated version with new models
 const User = require('./User');
 const Family = require('./Family');
 const FamilyMember = require('./FamilyMember');
@@ -73,30 +73,26 @@ Post.belongsTo(User, { foreignKey: 'createdById', as: 'author' });
 Post.belongsToMany(Family, { 
   through: PostFamily,
   foreignKey: 'postId',
-  otherKey: 'familyId',
-  as: 'families'
+  otherKey: 'familyId'
 });
 
 Family.belongsToMany(Post, { 
   through: PostFamily,
   foreignKey: 'familyId',
-  otherKey: 'postId',
-  as: 'posts'
+  otherKey: 'postId'
 });
 
 // Posts can be associated with multiple events
 Post.belongsToMany(Event, { 
   through: PostEvent,
   foreignKey: 'postId',
-  otherKey: 'eventId',
-  as: 'events'
+  otherKey: 'eventId'
 });
 
 Event.belongsToMany(Post, { 
   through: PostEvent,
   foreignKey: 'eventId',
-  otherKey: 'postId',
-  as: 'posts'
+  otherKey: 'postId'
 });
 
 // Comment associations
@@ -117,21 +113,6 @@ Like.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 // Media associations
 User.hasMany(Media, { foreignKey: 'uploadedById', as: 'uploads' });
 Media.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploader' });
-
-// Associate media with posts (via mediaUrls array)
-Media.belongsToMany(Post, { 
-  through: 'PostMedia',
-  foreignKey: 'mediaId',
-  otherKey: 'postId',
-  as: 'posts'
-});
-
-Post.belongsToMany(Media, {
-  through: 'PostMedia',
-  foreignKey: 'postId',
-  otherKey: 'mediaId',
-  as: 'media'
-});
 
 // Sync database
 const syncDatabase = async (force = false) => {

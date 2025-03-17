@@ -1,8 +1,8 @@
-// src/models/PostEvent.js
+// src/models/PostFamily.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-const PostEvent = sequelize.define('PostEvent', {
+const PostFamily = sequelize.define('PostFamily', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -16,11 +16,11 @@ const PostEvent = sequelize.define('PostEvent', {
       key: 'id'
     }
   },
-  eventId: {
+  familyId: {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'Events',
+      model: 'Families',
       key: 'id'
     }
   }
@@ -28,10 +28,10 @@ const PostEvent = sequelize.define('PostEvent', {
   timestamps: true,
   indexes: [
     {
-      fields: ['postId', 'eventId'],
+      fields: ['postId', 'familyId'],
       unique: true
     }
   ]
 });
 
-module.exports = PostEvent;
+module.exports = PostFamily;

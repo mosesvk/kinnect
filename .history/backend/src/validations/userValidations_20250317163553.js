@@ -3,21 +3,10 @@ const { body } = require('express-validator');
 
 // User registration validation
 exports.validateUserRegistration = [
-  body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email')
-    .normalizeEmail(),
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
-  body('firstName')
-    .notEmpty()
-    .withMessage('First name is required')
-    .trim(),
-  body('lastName')
-    .notEmpty()
-    .withMessage('Last name is required')
-    .trim()
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  body('firstName').notEmpty().withMessage('First name is required'),
+  body('lastName').notEmpty().withMessage('Last name is required')
 ];
 
 // User login validation
@@ -53,20 +42,15 @@ exports.validateUserUpdate = [
     .withMessage('Last name cannot be empty if provided')
     .trim(),
   body('dateOfBirth')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .isISO8601()
-    .withMessage('Date of birth must be a valid date')
-    .toDate(),
+    .withMessage('Date of birth must be a valid date'),
   body('phone')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .isMobilePhone()
     .withMessage('Please provide a valid phone number'),
   body('address')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .isObject()
-    .withMessage('Address must be an object'),
-  body('profileImage')
-    .optional()
-    .isURL()
-    .withMessage('Profile image must be a valid URL')
+    .withMessage('Address must be an object')
 ];

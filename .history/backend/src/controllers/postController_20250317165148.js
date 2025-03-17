@@ -1,5 +1,6 @@
 // src/controllers/postController.js
 const { Op } = require("sequelize");
+const User = require('../models/User')
 const Post = require("../models/Post");
 const PostFamily = require("../models/PostFamily");
 const PostEvent = require("../models/PostEvent");
@@ -8,7 +9,6 @@ const FamilyMember = require("../models/FamilyMember");
 const Event = require("../models/Event");
 const Comment = require("../models/Comment");
 const Like = require("../models/Like");
-const User = require("../models/User");
 const { sequelize } = require("../config/db");
 
 // @desc    Create a new post
@@ -645,7 +645,9 @@ exports.likePost = async (req, res) => {
   }
 };
 
-// src/controllers/postController.js (continued)
+// @desc    Comment on a post
+// @route   POST /api/posts/:id/comments
+// @access  Private
 exports.addComment = async (req, res) => {
   try {
     const postId = req.params.id;
@@ -835,7 +837,6 @@ exports.getComments = async (req, res) => {
     });
   }
 };
-
 // @desc    Get posts for a family
 // @route   GET /api/families/:familyId/posts
 // @access  Private

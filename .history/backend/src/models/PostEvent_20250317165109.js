@@ -1,4 +1,4 @@
-// src/models/PostEvent.js
+// src/models/PostEvent.js - Fix the model definition
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 

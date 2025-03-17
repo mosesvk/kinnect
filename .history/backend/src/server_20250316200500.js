@@ -1,27 +1,20 @@
-// src/server.js
 const express = require("express");
 const { connectDB } = require("./config/db");
 const { syncDatabase } = require("./models/Index");
 const dotenv = require("dotenv");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const path = require("path");
-
-// Import route files
 const userRoutes = require('./routes/userRoutes');
 const familyRoutes = require('./routes/familyRoutes');
 const { familyEventRoutes, eventRoutes } = require('./routes/eventRoutes');
 const familyPostRoutes = require('./routes/familyPostRoutes');
 const eventPostRoutes = require('./routes/eventPostRoutes');
 const postRoutes = require('./routes/postRoutes');
-const mediaRoutes = require('./routes/mediaRoutes');
-const familyMediaRoutes = require('./routes/familyMediaRoutes');
-
-// Import middleware
+const mediaRoutes = require('./routes/mediaRoutes')
+const familyMediaRoutes = require('./routes/familyMediaRoutes')
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-const { apiLimiter, authLimiter, mediaLimiter } = require("./middleware/rateLimiter");
-const corsOptions = require("./config/cors");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const path = require("path");
 
 // Load environment variables
 dotenv.config();
@@ -30,47 +23,48 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Basic middleware
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configure CORS with environment-specific options
-app.use(cors(corsOptions));
-
-// Configure Helmet for security headers
+// Configure CORS with more explicit options
 app.use(
-  helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production',
-    crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
+  cors({
+    origin: "*", // During development, allow all origins
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Logging middleware in development
+// Configure Helmet but disable content security policy for development
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  })
+);
+
+// Logging middleware
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
-
-// Serve static files from uploads directory in development
-if (process.env.NODE_ENV !== "production") {
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-}
-
-// Apply rate limiters
-app.use('/api/', apiLimiter);
-app.use('/api/users/login', authLimiter);
-app.use('/api/users/register', authLimiter);
-app.use('/api/media/upload', mediaLimiter);
 
 // Welcome route
 app.get("/api", (req, res) => {
   res.json({
     success: true,
-    message: "Welcome to the KINNECT API",
+    message: "Welcome to the Family App API",
     version: "1.0.0",
   });
 });
 
-// API routes
+app.post("/api/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Test endpoint working",
+  });
+});
+
+// Main API routes
 app.use('/api/users', userRoutes);
 app.use('/api/families', familyRoutes);
 app.use('/api/events', eventRoutes);
@@ -92,6 +86,22 @@ app.param('familyId', (req, res, next, id) => {
 app.param('eventId', (req, res, next, id) => {
   req.params.eventId = id;
   next();
+});
+
+// Error handling middleware
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  res.status(404);
+  next(error);
+});
+
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+  });
 });
 
 // Error handling middleware - must be used after all routes
@@ -128,3 +138,4 @@ if (process.env.NODE_ENV !== 'test' || process.env.FORCE_START === 'true') {
 }
 
 module.exports = app; // Export the app for testing
+

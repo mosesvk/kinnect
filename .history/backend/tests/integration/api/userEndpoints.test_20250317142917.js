@@ -7,10 +7,6 @@ const User = require('../../../src/models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../../../src/utils/jwt', () => ({
-  generateToken: jest.fn().mockReturnValue('test-token')
-}));
-
 jest.setTimeout(30000);
 
 describe('User API Endpoints', () => {
@@ -158,17 +154,13 @@ describe('User API Endpoints', () => {
 
   describe('POST /api/users/login', () => {
     it('should login successfully with correct credentials', async () => {
-      // Set up bcrypt to return true for any comparison in this test
-      const bcrypt = require('bcryptjs');
-      bcrypt.compare = jest.fn().mockResolvedValue(true);
-      
       const response = await request(app)
         .post('/api/users/login')
         .send({
           email: testUserEmail,
           password: 'password123'
         });
-  
+
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.user).toHaveProperty('token');

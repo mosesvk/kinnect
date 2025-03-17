@@ -5,7 +5,7 @@ const Family = require('../models/Family');
 const Post = require('../models/Post');
 const PostFamily = require('../models/PostFamily');
 const { sequelize } = require('../config/db');
-const { upload, uploadFile, deleteFile } = require('../services/fileUplad');
+const { upload, uploadFile, deleteFile } = require('../services/fileUpload');
 
 // @desc    Upload media file
 // @route   POST /api/media/upload
