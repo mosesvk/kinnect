@@ -106,37 +106,10 @@ describe("Family API Integration Tests", () => {
     });
 
     FamilyMember.findOne.mockImplementation(({ where }) => {
-      // For admin permission check (specific to updating families)
-      if (
-        where.familyId === "family-123" &&
-        where.userId === "user-123" &&
-        where.role === "admin"
-      ) {
-        return Promise.resolve({
-          role: "admin",
-          familyId: "family-123",
-          userId: "user-123",
-        });
-      }
-
-      // For regular member role check (user-456 updating test)
-      if (
-        where.familyId === "family-123" &&
-        where.userId === "user-456" &&
-        where.role === "admin"
-      ) {
-        return Promise.resolve(null); // Not an admin
-      }
-
-      // For general membership check
-      if (where.familyId && where.userId) {
-        const member = testFamilyMembers.find(
-          (m) => m.familyId === where.familyId && m.userId === where.userId
-        );
-        return Promise.resolve(member || null);
-      }
-
-      return Promise.resolve(null);
+      const member = testFamilyMembers.find(
+        (m) => m.familyId === where.familyId && m.userId === where.userId
+      );
+      return Promise.resolve(member || null);
     });
 
     sequelize.query.mockImplementation((query, options) => {
