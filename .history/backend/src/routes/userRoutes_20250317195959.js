@@ -14,8 +14,10 @@ const {
 // User routes
 router.post("/register", validateUserRegistration, registerUser); // register
 router.post("/login", validateUserLogin, loginUser); // Login user
+router.post("/:id", loginUser); // Login user
 router.get("/profile", protect, getUserProfile); // Get user profile
 router.put("/profile", protect, updateUserProfile); // Update user profile
+router.post;
 
 // Admin route - make sure getAllUsers is defined in userController.js
 router.get("/", protect, getAllUsers); // Get all users
