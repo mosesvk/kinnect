@@ -8,33 +8,33 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid'); // Make sure uuid is installed
 
-// Create a valid UUID for testing
-const TEST_USER_UUID = uuidv4();
-
-// Mock the JWT token generation to use our valid UUID
-jest.mock('../../../src/middleware/auth', () => ({
-  protect: jest.fn((req, res, next) => {
-    // Use our valid UUID for all auth requests
-    req.user = {
-      id: TEST_USER_UUID,
-      role: 'user'
-    };
-    next();
-  }),
-  admin: jest.fn((req, res, next) => {
-    next();
-  })
-}));
+// Mock the JWT token generation and auth middleware before requiring the route files
+jest.mock('../../../src/middleware/auth', () => {
+  // Create a UUID inside the mock to avoid referencing external variables
+  const mockUserId = '00000000-0000-0000-0000-000000000000'; // Fixed UUID for testing
+  
+  return {
+    protect: (req, res, next) => {
+      req.user = {
+        id: mockUserId,
+        role: 'user'
+      };
+      next();
+    },
+    admin: (req, res, next) => {
+      next();
+    }
+  };
+});
 
 jest.setTimeout(30000);
 
 describe('User API Endpoints', () => {
   let testUser;
   let adminUser;
-  let userToken;
-  let adminToken;
   let testUserEmail;
   let adminUserEmail;
+  const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000'; // Same as in mock
 
   // Helper functions
   const generateRandomEmail = () => {
@@ -69,7 +69,7 @@ describe('User API Endpoints', () => {
         // Create special user with our test UUID to match auth middleware
         const specialUserPassword = await bcrypt.hash('test123', 10);
         await User.create({
-          id: TEST_USER_UUID,
+          id: MOCK_USER_ID,
           firstName: 'Special',
           lastName: 'TestUser',
           email: 'special@example.com',
@@ -99,10 +99,6 @@ describe('User API Endpoints', () => {
 
         await transaction.commit();
         
-        // Generate tokens
-        userToken = generateToken(testUser.id);
-        adminToken = generateToken(adminUser.id);
-        
         console.log('Test setup completed successfully');
       } catch (error) {
         await transaction.rollback();
@@ -121,7 +117,7 @@ describe('User API Endpoints', () => {
       // Clean up test users
       await User.destroy({
         where: {
-          id: [testUser.id, adminUser.id, TEST_USER_UUID]
+          id: [testUser.id, adminUser.id, MOCK_USER_ID]
         },
         force: true
       });
@@ -184,12 +180,25 @@ describe('User API Endpoints', () => {
 
   describe('POST /api/users/login', () => {
     it('should login successfully with correct credentials', async () => {
-      // For this test, we'll use the special user
+      // Special test case that handles 'special@example.com' login
       const response = await request(app)
         .post('/api/users/login')
         .send({
           email: 'special@example.com',
           password: 'test123'
+        });
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.user).toHaveProperty('token');
+    });
+
+    it('should login successfully with test user credentials', async () => {
+      const response = await request(app)
+        .post('/api/users/login')
+        .send({
+          email: testUserEmail,
+          password: 'password123'
         });
   
       expect(response.status).toBe(200);
@@ -238,7 +247,7 @@ describe('User API Endpoints', () => {
 
   describe('GET /api/users/profile', () => {
     it('should get user profile successfully', async () => {
-      // Use any authorization header - our mocked middleware will use TEST_USER_UUID
+      // Use any authorization header - our mocked middleware will use MOCK_USER_ID
       const response = await request(app)
         .get('/api/users/profile')
         .set('Authorization', 'Bearer any-token-will-work');
@@ -247,7 +256,7 @@ describe('User API Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.user).toHaveProperty('id');
       // Expect the user to be our special test user
-      expect(response.body.user.id).toBe(TEST_USER_UUID);
+      expect(response.body.user.id).toBe(MOCK_USER_ID);
     });
 
     it('should return 401 if no token provided', async () => {
