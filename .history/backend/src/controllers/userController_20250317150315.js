@@ -70,100 +70,46 @@ exports.registerUser = async (req, res) => {
 // @access  Public
 exports.loginUser = async (req, res) => {
     try {
-      const { email, password } = req.body;
-  
-      // Check if email and password are provided
-      if (!email || !password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Please provide email and password'
-        });
-      }
-  
-      // Find user by email
-      const user = await User.findOne({ where: { email } });
-  
-      // Add debugging in test mode
-      if (process.env.NODE_ENV === 'test') {
-        console.log('Login attempt:', { email, providedPassword: password });
-        console.log('User found:', user ? user.id : 'Not found');
-        
-        // For tests, allow special test credentials
-        if (email === 'test@example.com' && password === 'password123') {
-          return res.json({
-            success: true,
-            user: {
-              id: user ? user.id : 'test-user-id',
-              firstName: user ? user.firstName : 'Test',
-              lastName: user ? user.lastName : 'User',
-              email: email,
-              token: 'test-token'
-            }
-          });
+        const { email, password } = req.body;
+
+        // Check if email and password are provided
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide email and password'
+            });
         }
-      }
-  
-      // Check if user exists
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid email or password'
-        });
-      }
-  
-      // Check password match
-      let isMatch;
-      try {
-        // Try using the User model's matchPassword method first
-        if (typeof user.matchPassword === 'function') {
-          isMatch = await user.matchPassword(password);
+
+        // Find user by email
+        const user = await User.findOne({ where: { email } });
+
+        // Check if user exists and password matches
+        if (user && (await bcrypt.compare(password, user.passwordHash))) {
+            res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    token: generateToken(user.id)
+                }
+            });
         } else {
-          // Fall back to direct bcrypt compare
-          isMatch = await bcrypt.compare(password, user.passwordHash);
+            res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
+            });
         }
-      } catch (error) {
-        console.error('Password comparison error:', error);
-        isMatch = false;
-      }
-  
-      if (isMatch) {
-        // Generate token
-        let token;
-        if (typeof user.generateToken === 'function') {
-          token = user.generateToken();
-        } else {
-          token = jwt.sign(
-            { id: user.id },
-            process.env.JWT_SECRET || 'test-secret-key',
-            { expiresIn: '24h' }
-          );
-        }
-  
-        res.json({
-          success: true,
-          user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            token: token
-          }
-        });
-      } else {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid email or password'
-        });
-      }
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Server error',
-        error: error.message
-      });
+        console.error('Login error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
     }
-  };
+};
 
 // @desc    Get user profile
 // @route   GET /api/users/profile

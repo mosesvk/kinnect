@@ -124,30 +124,22 @@ describe('User Routes Integration Tests', () => {
   
   describe('POST /api/users/login', () => {
     it('should login user successfully with correct credentials', async () => {
-      // Reset mocks
-      jest.clearAllMocks();
+      // Reset and set up the mock again just for this test
+      bcrypt.compare.mockReset();
+      bcrypt.compare.mockResolvedValue(true);
       
-      // Mock bcrypt.compare to return true for any inputs
-      bcrypt.compare.mockImplementation(() => Promise.resolve(true));
-      
-      // Create a more complete mock user with working properties
+      // Mock user found with proper matchPassword and generateToken methods
       const mockUser = {
         id: 'user123',
         firstName: 'Test',
         lastName: 'User',
         email: 'test@example.com',
         passwordHash: 'hashed_password',
-        role: 'user',
-        // Add these methods directly
-        matchPassword: jest.fn().mockResolvedValue(true),
+        matchPassword: jest.fn().mockResolvedValue(true), // Make sure this returns true
         generateToken: jest.fn().mockReturnValue('test-token')
       };
       
-      // Mock User.findOne to return our mock user
       User.findOne.mockResolvedValue(mockUser);
-      
-      // Mock jwt.sign to return a predictable token
-      jwt.sign.mockReturnValue('test-token');
       
       const response = await request(app)
         .post('/api/users/login')
@@ -155,9 +147,6 @@ describe('User Routes Integration Tests', () => {
           email: 'test@example.com',
           password: 'password123',
         });
-      
-      // Log response for debugging
-      console.log('Login response:', response.status, response.body);
       
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);

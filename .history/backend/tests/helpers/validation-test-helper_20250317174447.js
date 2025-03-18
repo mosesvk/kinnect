@@ -42,8 +42,6 @@ const createValidationTestApp = (validations) => {
           data: req.body,
         });
       } catch (error) {
-        console.log("Validation errors:", error.array());
-
         res.status(500).json({
           success: false,
           message: "Server error",
@@ -53,6 +51,7 @@ const createValidationTestApp = (validations) => {
     });
   }
 
+  console.log("Validation errors:", errors.array());
 
   return app;
 };

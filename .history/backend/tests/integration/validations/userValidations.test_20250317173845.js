@@ -22,19 +22,19 @@ describe("User Validations Integration Tests", () => {
   describe("User Registration Validation", () => {
     it("should pass validation with valid data", async () => {
       const validData = {
-        firstName: "Updated",
-        lastName: "User",
-        email: "updated@example.com",
-        password: "newpassword123",
-        dateOfBirth: "1990-01-01",
-        phone: "+15551234567",
+        firstName: 'Updated',
+        lastName: 'User',
+        email: 'updated@example.com',
+        password: 'newpassword123',
+        dateOfBirth: '1990-01-01',
+        phone: '+15551234567',
         address: {
-          street: "123 Main St",
-          city: "Anytown",
-          state: "CA",
-          zipCode: "12345",
-          country: "USA",
-        },
+          street: '123 Main St',
+          city: 'Anytown',
+          state: 'CA',
+          zipCode: '12345',
+          country: 'USA'
+        }
       };
 
       const response = await request(testApp)
@@ -241,23 +241,8 @@ describe("User Validations Integration Tests", () => {
         },
       };
 
-      // Log the data to help with debugging
-      console.log("Validation test data:", validData);
-
-      // The issue might be in the validation helper, so let's try directly with express
-      const app = express();
-      app.use(express.json());
-
-      app.post("/test/simple-validation", (req, res) => {
-        // Just echo back the data with success
-        res.json({
-          success: true,
-          data: req.body,
-        });
-      });
-
-      const response = await request(app)
-        .post("/test/simple-validation")
+      const response = await request(testApp)
+        .post("/test/user-update")
         .send(validData);
 
       expect(response.status).toBe(200);
