@@ -1,178 +1,145 @@
 // tests/integration/api/userEndpoints.test.js
 
-// First import the modules we need
 const request = require('supertest');
+const app = require('../../../src/server');
+const { sequelize } = require('../../../src/config/db');
+const User = require('../../../src/models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 
-// Define a mock sequelize for testing
-const mockSequelize = {
-  define: jest.fn().mockReturnValue({}),
-  authenticate: jest.fn().mockResolvedValue(),
-  transaction: jest.fn().mockImplementation(() => ({
-    commit: jest.fn().mockResolvedValue(),
-    rollback: jest.fn().mockResolvedValue()
-  })),
-  close: jest.fn().mockResolvedValue(),
-  QueryTypes: {
-    SELECT: 'SELECT'
-  },
-  query: jest.fn().mockResolvedValue([[]])
-};
-
-// Mock the db module first, before any models are loaded
-jest.mock('../../../src/config/db', () => ({
-  sequelize: mockSequelize,
-  connectDB: jest.fn().mockResolvedValue()
-}));
-
-// Define constants outside the mock
-const mockUserUUID = '12345678-1234-1234-1234-123456789012';
-
-// Create mock functions for bcrypt that we can control in tests
-const mockCompare = jest.fn().mockImplementation((password, hash) => {
-  // By default return true except for "wrongpassword"
-  return Promise.resolve(password !== 'wrongpassword');
-});
-
-// Mock bcrypt 
-jest.mock('bcryptjs', () => ({
-  compare: mockCompare,
-  hash: jest.fn().mockResolvedValue('hashedPassword'),
-  genSalt: jest.fn().mockResolvedValue('salt')
-}));
-
-// Now mock the User model
-jest.mock('../../../src/models/User', () => {
+// Mock the JWT token generation with a fixed string
+// We're using 'mock' prefix as allowed by Jest
+jest.mock('../../../src/middleware/auth', () => {
+  const mockUserUUID = '12345678-1234-1234-1234-123456789012'; // Fixed UUID for tests
+  
   return {
-    findOne: jest.fn().mockImplementation((options) => {
-      if (options && options.where && options.where.email === 'special@example.com') {
-        return Promise.resolve({
-          id: '12345678-1234-1234-1234-123456789012',
-          firstName: 'Special',
-          lastName: 'TestUser',
-          email: 'special@example.com',
-          passwordHash: 'hashedPassword',
-          role: 'user',
-          matchPassword: async (password) => {
-            // Use the mock to determine if password matches
-            return await mockCompare(password, 'hashedPassword');
-          },
-          generateToken: jest.fn().mockReturnValue('test-token')
-        });
-      } else if (options && options.where && options.where.email === 'existing@example.com') {
-        return Promise.resolve({
-          id: 'existing-id',
-          email: 'existing@example.com'
-        });
-      }
-      return Promise.resolve(null);
-    }),
-    findByPk: jest.fn().mockImplementation((id) => {
-      if (id === '12345678-1234-1234-1234-123456789012') {
-        return Promise.resolve({
-          id: '12345678-1234-1234-1234-123456789012',
-          firstName: 'Special',
-          lastName: 'TestUser',
-          email: 'special@example.com',
-          passwordHash: 'hashedPassword',
-          role: 'user',
-          save: jest.fn().mockImplementation(function() {
-            return Promise.resolve(this);
-          }),
-          toJSON: jest.fn().mockReturnValue({
-            id: '12345678-1234-1234-1234-123456789012',
-            firstName: 'Special',
-            lastName: 'TestUser',
-            email: 'special@example.com'
-          })
-        });
-      }
-      return Promise.resolve(null);
-    }),
-    findAll: jest.fn().mockResolvedValue([{
-      id: '12345678-1234-1234-1234-123456789012',
-      firstName: 'Special',
-      lastName: 'TestUser',
-      email: 'special@example.com'
-    }]),
-    create: jest.fn().mockImplementation((userData) => {
-      return Promise.resolve({
-        id: 'new-user-id',
-        ...userData,
-        toJSON: () => ({
-          id: 'new-user-id',
-          ...userData
-        })
-      });
-    })
-  };
-});
-
-// Mock additional models to avoid sequelize errors
-jest.mock('../../../src/models/Family', () => ({}));
-jest.mock('../../../src/models/FamilyMember', () => ({}));
-jest.mock('../../../src/models/Event', () => ({}));
-jest.mock('../../../src/models/EventAttendee', () => ({}));
-jest.mock('../../../src/models/Post', () => ({}));
-jest.mock('../../../src/models/PostFamily', () => ({}));
-jest.mock('../../../src/models/PostEvent', () => ({}));
-jest.mock('../../../src/models/Comment', () => ({}));
-jest.mock('../../../src/models/Like', () => ({}));
-jest.mock('../../../src/models/Media', () => ({}));
-jest.mock('../../../src/models/Index', () => ({
-  User: require('../../../src/models/User'),
-  Family: require('../../../src/models/Family'),
-  FamilyMember: require('../../../src/models/FamilyMember'),
-  Event: require('../../../src/models/Event'),
-  EventAttendee: require('../../../src/models/EventAttendee'),
-  Post: require('../../../src/models/Post'),
-  PostFamily: require('../../../src/models/PostFamily'),
-  PostEvent: require('../../../src/models/PostEvent'),
-  Comment: require('../../../src/models/Comment'),
-  Like: require('../../../src/models/Like'),
-  Media: require('../../../src/models/Media'),
-  syncDatabase: jest.fn().mockResolvedValue()
-}));
-
-// Mock jwt
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn().mockReturnValue('test-token'),
-  verify: jest.fn().mockReturnValue({ id: '12345678-1234-1234-1234-123456789012' })
-}));
-
-// Mock the auth middleware
-jest.mock('../../../src/middleware/auth', () => ({
-  protect: jest.fn((req, res, next) => {
-    if (req.headers.authorization && 
-        req.headers.authorization.startsWith('Bearer')) {
+    protect: jest.fn((req, res, next) => {
       req.user = {
-        id: '12345678-1234-1234-1234-123456789012',
+        id: mockUserUUID,
         role: 'user'
       };
       next();
-    } else {
-      res.status(401).json({
-        success: false,
-        message: 'Not authorized, no token'
-      });
+    }),
+    admin: jest.fn((req, res, next) => {
+      next();
+    }),
+    // Export a getter for tests to access the UUID
+    get TEST_USER_UUID() {
+      return mockUserUUID;
     }
-  }),
-  admin: jest.fn((req, res, next) => {
-    next();
-  })
-}));
+  };
+});
 
-// Import the app after all mocks are set up
-const app = require('../../../src/server');
+// Import after mocking to get the mock version
+const { TEST_USER_UUID } = require('../../../src/middleware/auth');
 
 jest.setTimeout(30000);
 
 describe('User API Endpoints', () => {
-  beforeAll(() => {
-    console.log('Test setup completed successfully');
+  let testUser;
+  let adminUser;
+  let userToken;
+  let adminToken;
+  let testUserEmail;
+  let adminUserEmail;
+
+  // Helper functions
+  const generateRandomEmail = () => {
+    const timestamp = new Date().getTime();
+    const random = Math.floor(Math.random() * 1000);
+    return `test${timestamp}${random}@example.com`;
+  };
+
+  // Generate JWT token for testing
+  const generateToken = (userId) => {
+    return jwt.sign(
+      { id: userId },
+      process.env.JWT_SECRET || 'test-secret-key',
+      { expiresIn: '1h' }
+    );
+  };
+
+  // Setup before all tests
+  beforeAll(async () => {
+    try {
+      // Connect to test database
+      await sequelize.authenticate();
+      
+      // Use transactions for test isolation
+      const transaction = await sequelize.transaction();
+      
+      try {
+        // Create random emails for test users
+        testUserEmail = generateRandomEmail();
+        adminUserEmail = generateRandomEmail();
+
+        // Create special user with our test UUID to match auth middleware
+        const specialUserPassword = await bcrypt.hash('test123', 10);
+        await User.create({
+          id: TEST_USER_UUID,
+          firstName: 'Special',
+          lastName: 'TestUser',
+          email: 'special@example.com',
+          passwordHash: specialUserPassword,
+          role: 'user'
+        }, { transaction });
+
+        // Create regular test user
+        const hashedPassword = await bcrypt.hash('password123', 10);
+        testUser = await User.create({
+          firstName: 'Test',
+          lastName: 'User',
+          email: testUserEmail,
+          passwordHash: hashedPassword,
+          role: 'user'
+        }, { transaction });
+
+        // Create admin test user
+        const adminHashedPassword = await bcrypt.hash('admin123', 10);
+        adminUser = await User.create({
+          firstName: 'Admin',
+          lastName: 'User',
+          email: adminUserEmail,
+          passwordHash: adminHashedPassword,
+          role: 'admin'
+        }, { transaction });
+
+        await transaction.commit();
+        
+        // Generate tokens
+        userToken = generateToken(testUser.id);
+        adminToken = generateToken(adminUser.id);
+        
+        console.log('Test setup completed successfully');
+      } catch (error) {
+        await transaction.rollback();
+        console.error('Test setup failed:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Database connection failed:', error);
+      throw error;
+    }
   });
 
-  afterAll(() => {
-    console.log('Test cleanup completed successfully');
+  // Cleanup after all tests
+  afterAll(async () => {
+    try {
+      // Clean up test users
+      await User.destroy({
+        where: {
+          id: [testUser.id, adminUser.id, TEST_USER_UUID]
+        },
+        force: true
+      });
+      
+      // Close database connection
+      await sequelize.close();
+      console.log('Test cleanup completed successfully');
+    } catch (error) {
+      console.error('Test cleanup failed:', error);
+    }
   });
 
   describe('POST /api/users/register', () => {
@@ -182,7 +149,7 @@ describe('User API Endpoints', () => {
         .send({
           firstName: 'New',
           lastName: 'User',
-          email: 'newuser@example.com',
+          email: generateRandomEmail(),
           password: 'password123'
         });
 
@@ -200,7 +167,7 @@ describe('User API Endpoints', () => {
         .send({
           firstName: 'Duplicate',
           lastName: 'User',
-          email: 'existing@example.com',
+          email: testUserEmail, // Use existing email
           password: 'password123'
         });
 
@@ -213,7 +180,7 @@ describe('User API Endpoints', () => {
       const response = await request(app)
         .post('/api/users/register')
         .send({
-          firstName: 'Incomplete'
+          firstName: 'Incomplete',
           // Missing lastName, email, and password
         });
 
@@ -225,11 +192,12 @@ describe('User API Endpoints', () => {
 
   describe('POST /api/users/login', () => {
     it('should login successfully with correct credentials', async () => {
+      // For this test, we'll use the special user
       const response = await request(app)
         .post('/api/users/login')
         .send({
           email: 'special@example.com',
-          password: 'test123' // This should match
+          password: 'test123'
         });
   
       expect(response.status).toBe(200);
@@ -241,8 +209,8 @@ describe('User API Endpoints', () => {
       const response = await request(app)
         .post('/api/users/login')
         .send({
-          email: 'special@example.com',
-          password: 'wrongpassword' // This should fail in our mock
+          email: testUserEmail,
+          password: 'wrongpassword'
         });
 
       expect(response.status).toBe(401);
@@ -278,6 +246,7 @@ describe('User API Endpoints', () => {
 
   describe('GET /api/users/profile', () => {
     it('should get user profile successfully', async () => {
+      // Use any authorization header - our mocked middleware will use TEST_USER_UUID
       const response = await request(app)
         .get('/api/users/profile')
         .set('Authorization', 'Bearer any-token-will-work');
@@ -285,7 +254,8 @@ describe('User API Endpoints', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.user).toHaveProperty('id');
-      expect(response.body.user.id).toBe(mockUserUUID);
+      // Expect the user to be our special test user
+      expect(response.body.user.id).toBe(TEST_USER_UUID);
     });
 
     it('should return 401 if no token provided', async () => {
@@ -310,6 +280,8 @@ describe('User API Endpoints', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
+      expect(response.body.user.firstName).toBe('Updated');
+      expect(response.body.user.lastName).toBe('TestUser');
       expect(response.body.user).toHaveProperty('token');
     });
 
@@ -323,6 +295,7 @@ describe('User API Endpoints', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
+      expect(response.body.user.firstName).toBe('JustFirstName');
       expect(response.body.user).toHaveProperty('token');
     });
 
@@ -349,6 +322,7 @@ describe('User API Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('users');
       expect(Array.isArray(response.body.users)).toBe(true);
+      expect(response.body.users.length).toBeGreaterThanOrEqual(3); // At least our test users
     });
 
     it('should return 401 if no token provided', async () => {

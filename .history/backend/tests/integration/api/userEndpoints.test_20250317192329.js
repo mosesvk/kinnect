@@ -27,19 +27,6 @@ jest.mock('../../../src/config/db', () => ({
 // Define constants outside the mock
 const mockUserUUID = '12345678-1234-1234-1234-123456789012';
 
-// Create mock functions for bcrypt that we can control in tests
-const mockCompare = jest.fn().mockImplementation((password, hash) => {
-  // By default return true except for "wrongpassword"
-  return Promise.resolve(password !== 'wrongpassword');
-});
-
-// Mock bcrypt 
-jest.mock('bcryptjs', () => ({
-  compare: mockCompare,
-  hash: jest.fn().mockResolvedValue('hashedPassword'),
-  genSalt: jest.fn().mockResolvedValue('salt')
-}));
-
 // Now mock the User model
 jest.mock('../../../src/models/User', () => {
   return {
@@ -52,10 +39,7 @@ jest.mock('../../../src/models/User', () => {
           email: 'special@example.com',
           passwordHash: 'hashedPassword',
           role: 'user',
-          matchPassword: async (password) => {
-            // Use the mock to determine if password matches
-            return await mockCompare(password, 'hashedPassword');
-          },
+          matchPassword: jest.fn().mockResolvedValue(true),
           generateToken: jest.fn().mockReturnValue('test-token')
         });
       } else if (options && options.where && options.where.email === 'existing@example.com') {
@@ -131,6 +115,13 @@ jest.mock('../../../src/models/Index', () => ({
   Like: require('../../../src/models/Like'),
   Media: require('../../../src/models/Media'),
   syncDatabase: jest.fn().mockResolvedValue()
+}));
+
+// Mock bcrypt
+jest.mock('bcryptjs', () => ({
+  compare: jest.fn().mockResolvedValue(true),
+  hash: jest.fn().mockResolvedValue('hashedPassword'),
+  genSalt: jest.fn().mockResolvedValue('salt')
 }));
 
 // Mock jwt
@@ -229,7 +220,7 @@ describe('User API Endpoints', () => {
         .post('/api/users/login')
         .send({
           email: 'special@example.com',
-          password: 'test123' // This should match
+          password: 'test123'
         });
   
       expect(response.status).toBe(200);
@@ -238,11 +229,14 @@ describe('User API Endpoints', () => {
     });
 
     it('should return 401 with incorrect password', async () => {
+      // Override the bcrypt compare for this specific test
+      require('bcryptjs').compare.mockResolvedValueOnce(false);
+
       const response = await request(app)
         .post('/api/users/login')
         .send({
           email: 'special@example.com',
-          password: 'wrongpassword' // This should fail in our mock
+          password: 'wrongpassword'
         });
 
       expect(response.status).toBe(401);

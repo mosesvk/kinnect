@@ -1,46 +1,14 @@
 // tests/integration/api/userEndpoints.test.js
 
-// First import the modules we need
 const request = require('supertest');
+const app = require('../../../src/server');
+// tests/integration/api/userEndpoints.test.js
 
-// Define a mock sequelize for testing
-const mockSequelize = {
-  define: jest.fn().mockReturnValue({}),
-  authenticate: jest.fn().mockResolvedValue(),
-  transaction: jest.fn().mockImplementation(() => ({
-    commit: jest.fn().mockResolvedValue(),
-    rollback: jest.fn().mockResolvedValue()
-  })),
-  close: jest.fn().mockResolvedValue(),
-  QueryTypes: {
-    SELECT: 'SELECT'
-  },
-  query: jest.fn().mockResolvedValue([[]])
-};
-
-// Mock the db module first, before any models are loaded
-jest.mock('../../../src/config/db', () => ({
-  sequelize: mockSequelize,
-  connectDB: jest.fn().mockResolvedValue()
-}));
 
 // Define constants outside the mock
 const mockUserUUID = '12345678-1234-1234-1234-123456789012';
 
-// Create mock functions for bcrypt that we can control in tests
-const mockCompare = jest.fn().mockImplementation((password, hash) => {
-  // By default return true except for "wrongpassword"
-  return Promise.resolve(password !== 'wrongpassword');
-});
-
-// Mock bcrypt 
-jest.mock('bcryptjs', () => ({
-  compare: mockCompare,
-  hash: jest.fn().mockResolvedValue('hashedPassword'),
-  genSalt: jest.fn().mockResolvedValue('salt')
-}));
-
-// Now mock the User model
+// Mock the modules
 jest.mock('../../../src/models/User', () => {
   return {
     findOne: jest.fn().mockImplementation((options) => {
@@ -52,10 +20,7 @@ jest.mock('../../../src/models/User', () => {
           email: 'special@example.com',
           passwordHash: 'hashedPassword',
           role: 'user',
-          matchPassword: async (password) => {
-            // Use the mock to determine if password matches
-            return await mockCompare(password, 'hashedPassword');
-          },
+          matchPassword: jest.fn().mockResolvedValue(true),
           generateToken: jest.fn().mockReturnValue('test-token')
         });
       } else if (options && options.where && options.where.email === 'existing@example.com') {
@@ -107,30 +72,11 @@ jest.mock('../../../src/models/User', () => {
   };
 });
 
-// Mock additional models to avoid sequelize errors
-jest.mock('../../../src/models/Family', () => ({}));
-jest.mock('../../../src/models/FamilyMember', () => ({}));
-jest.mock('../../../src/models/Event', () => ({}));
-jest.mock('../../../src/models/EventAttendee', () => ({}));
-jest.mock('../../../src/models/Post', () => ({}));
-jest.mock('../../../src/models/PostFamily', () => ({}));
-jest.mock('../../../src/models/PostEvent', () => ({}));
-jest.mock('../../../src/models/Comment', () => ({}));
-jest.mock('../../../src/models/Like', () => ({}));
-jest.mock('../../../src/models/Media', () => ({}));
-jest.mock('../../../src/models/Index', () => ({
-  User: require('../../../src/models/User'),
-  Family: require('../../../src/models/Family'),
-  FamilyMember: require('../../../src/models/FamilyMember'),
-  Event: require('../../../src/models/Event'),
-  EventAttendee: require('../../../src/models/EventAttendee'),
-  Post: require('../../../src/models/Post'),
-  PostFamily: require('../../../src/models/PostFamily'),
-  PostEvent: require('../../../src/models/PostEvent'),
-  Comment: require('../../../src/models/Comment'),
-  Like: require('../../../src/models/Like'),
-  Media: require('../../../src/models/Media'),
-  syncDatabase: jest.fn().mockResolvedValue()
+// Mock bcrypt
+jest.mock('bcryptjs', () => ({
+  compare: jest.fn().mockResolvedValue(true),
+  hash: jest.fn().mockResolvedValue('hashedPassword'),
+  genSalt: jest.fn().mockResolvedValue('salt')
 }));
 
 // Mock jwt
@@ -159,6 +105,19 @@ jest.mock('../../../src/middleware/auth', () => ({
   admin: jest.fn((req, res, next) => {
     next();
   })
+}));
+
+// Mock sequelize
+jest.mock('../../../src/config/db', () => ({
+  sequelize: {
+    authenticate: jest.fn().mockResolvedValue(),
+    transaction: jest.fn().mockImplementation(() => ({
+      commit: jest.fn().mockResolvedValue(),
+      rollback: jest.fn().mockResolvedValue()
+    })),
+    close: jest.fn().mockResolvedValue()
+  },
+  connectDB: jest.fn().mockResolvedValue()
 }));
 
 // Import the app after all mocks are set up
@@ -229,7 +188,7 @@ describe('User API Endpoints', () => {
         .post('/api/users/login')
         .send({
           email: 'special@example.com',
-          password: 'test123' // This should match
+          password: 'test123'
         });
   
       expect(response.status).toBe(200);
@@ -238,11 +197,14 @@ describe('User API Endpoints', () => {
     });
 
     it('should return 401 with incorrect password', async () => {
+      // Override the bcrypt compare for this specific test
+      require('bcryptjs').compare.mockResolvedValueOnce(false);
+
       const response = await request(app)
         .post('/api/users/login')
         .send({
           email: 'special@example.com',
-          password: 'wrongpassword' // This should fail in our mock
+          password: 'wrongpassword'
         });
 
       expect(response.status).toBe(401);
