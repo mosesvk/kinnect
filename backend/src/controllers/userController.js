@@ -2,8 +2,15 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User'); // Make sure your User model is properly imported
+const FamilyMember = require('../models/FamilyMember')
+const Family = require('../models/Family')
+const EventAttendee = require('../models/EventAttendee')
+const Like = require('../models/Like')
+const Comment = require('../models/Comment')
+const Post = require('../models/Post')
+const Media = require('../models/Media')
 const { generateToken } = require('../utils/jwt');
-
+const { sequelize } = require("../config/db");
 
 // @desc    Register a new user
 // @route   POST /api/users
