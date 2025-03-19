@@ -26,13 +26,11 @@ const Event = sequelize.define('Event', {
   },
   startDate: {
     type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW // Initialize to current date/time
+    allowNull: false
   },
   endDate: {
     type: DataTypes.DATE,
-    allowNull: true, // Explicitly allow null
-    defaultValue: null
+    allowNull: true
   },
   location: {
     type: DataTypes.JSONB,

@@ -10,8 +10,6 @@ const { Op } = require('sequelize');
 // @access  Private
 exports.createEvent = async (req, res) => {
   try {
-
-    
     const { familyId } = req.params;
     const { title, description, startDate, endDate, location, category, recurring, reminders } = req.body;
 

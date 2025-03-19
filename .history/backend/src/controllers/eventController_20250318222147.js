@@ -10,9 +10,18 @@ const { Op } = require('sequelize');
 // @access  Private
 exports.createEvent = async (req, res) => {
   try {
-
-    
     const { familyId } = req.params;
+    
+    console.log('Creating event for family:', familyId);
+    
+    // Validate familyId
+    if (!familyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Family ID is required'
+      });
+    }
+
     const { title, description, startDate, endDate, location, category, recurring, reminders } = req.body;
 
     // Check if user is a member of this family
@@ -35,7 +44,7 @@ exports.createEvent = async (req, res) => {
       familyId,
       title,
       description,
-      startDate,
+      startDate: startDate || new Date(), // Use current time if not provided
       endDate,
       location,
       category,

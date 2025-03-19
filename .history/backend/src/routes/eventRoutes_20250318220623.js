@@ -1,6 +1,6 @@
 // src/routes/eventRoutes.js
 const express = require('express');
-const router = express.Router({ mergeParams: true }); // Add this option
+const router = express.Router();
 const { protect } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { validateEventCreation, validateEventUpdate, validateAttendance } = require('../validations/eventValidations');
@@ -15,8 +15,8 @@ const {
 } = require('../controllers/eventController');
 
 // Routes within /api/families/:familyId/events
-router.post('/', protect, validate(validateEventCreation), createEvent);
-router.get('/', protect, getFamilyEvents);
+router.post('/api/families/:familyId/events', protect, validate(validateEventCreation), createEvent);
+router.get('/api/families/:familyId/events', protect, getFamilyEvents);
 
 // Routes within /api/events
 const eventRouter = express.Router();

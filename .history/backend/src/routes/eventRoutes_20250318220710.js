@@ -1,6 +1,6 @@
 // src/routes/eventRoutes.js
 const express = require('express');
-const router = express.Router({ mergeParams: true }); // Add this option
+const router = express.Router();
 const { protect } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { validateEventCreation, validateEventUpdate, validateAttendance } = require('../validations/eventValidations');
