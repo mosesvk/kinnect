@@ -698,13 +698,6 @@ exports.updateEventInvitation = async (req, res) => {
         id: invitationId,
         eventId,
       },
-      include: [
-        {
-          model: User,
-          as: "invitedUser",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-      ],
     });
 
     if (!invitation) {
