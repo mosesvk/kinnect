@@ -4,7 +4,7 @@ const Family = require("./Family");
 const FamilyMember = require("./FamilyMember");
 const Event = require("./Event");
 const EventAttendee = require("./EventAttendee");
-const EventInvitation = require('./EventInvitation')
+const EventInvitation = require('./EventInventation')
 const Post = require("./Post");
 const PostFamily = require("./PostFamily");
 const PostEvent = require("./PostEvent");
@@ -167,7 +167,6 @@ const syncDatabase = async (force = false) => {
     await FamilyMember.sync({ alter: true });
     await Event.sync({ alter: true });
     await EventAttendee.sync({ alter: true });
-    await EventInvitation.sync({ alter: true });
     await Post.sync({ alter: true });
     await PostFamily.sync({ alter: true });
     await PostEvent.sync({ alter: true });
@@ -186,7 +185,7 @@ module.exports = {
   User,
   Family,
   FamilyMember,
-  EventInvitation,
+  EventInvitation
   Event,
   EventAttendee,
   Post,

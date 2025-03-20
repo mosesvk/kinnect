@@ -2,8 +2,7 @@
 const Event = require("../models/Event");
 const EventAttendee = require("../models/EventAttendee");
 const FamilyMember = require("../models/FamilyMember");
-const EventInvitation = require('../models/EventInvitation')
-const User = require('../models/User')
+const EventInvitation = require('../models/EventInvintation')
 const { sequelize } = require("../config/db");
 const { Op } = require("sequelize");
 
@@ -381,7 +380,6 @@ exports.manageAttendance = async (req, res) => {
       : null;
 
     // User must either be a family member or have an accepted invitation
-
     if (!membership && !invitation) {
       return res.status(403).json({
         success: false,
