@@ -18,7 +18,7 @@ const {
   getComments
 } = require('../controllers/postController');
 
-// Post routes /api/posts
+// Post routes
 router.post('/', protect, validate(validatePostCreation), createPost);
 router.get('/:id', protect, getPostById);
 router.put('/:id', protect, validate(validatePostUpdate), updatePost);
