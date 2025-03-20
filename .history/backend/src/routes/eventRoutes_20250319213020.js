@@ -11,10 +11,7 @@ const {
   updateEvent,
   deleteEvent,
   manageAttendance,
-  getEventAttendees,
-  sendEventInvitation,
-  getEventInvitations,
-  updateEventInvitation
+  getEventAttendees
 } = require('../controllers/eventController');
 
 // Routes within /api/families/:familyId/events

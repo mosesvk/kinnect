@@ -339,11 +339,11 @@ exports.manageAttendance = async (req, res) => {
     const { status, userId } = req.body;
 
     // Validate status
-    const validStatuses = ["attending", "maybe", "declined"];
+    const validStatuses = ['attending', 'maybe', 'declined'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Must be attending, maybe, or declined",
+        message: 'Invalid status. Must be attending, maybe, or declined'
       });
     }
 
@@ -353,73 +353,70 @@ exports.manageAttendance = async (req, res) => {
     if (!event) {
       return res.status(404).json({
         success: false,
-        message: "Event not found",
+        message: 'Event not found'
       });
     }
 
     const targetUserId = userId || req.user.id;
-
+    
     // Check if the user is a member of the family this event belongs to
     const membership = await FamilyMember.findOne({
       where: {
         familyId: event.familyId,
-        userId: req.user.id,
-      },
+        userId: req.user.id
+      }
     });
-
+    
     // Check if user has been invited to this event (if not a family member)
-    const invitation = !membership
-      ? await EventInvitation.findOne({
-          where: {
-            eventId,
-            userId: req.user.id,
-            status: "accepted",
-          },
-        })
-      : null;
+    const invitation = !membership ? await EventInvitation.findOne({
+      where: {
+        eventId,
+        userId: req.user.id,
+        status: 'accepted'
+      }
+    }) : null;
 
     // User must either be a family member or have an accepted invitation
     if (!membership && !invitation) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to respond to this event",
+        message: 'Not authorized to respond to this event'
       });
     }
 
     // If updating another user's status, check if current user is admin
     if (targetUserId !== req.user.id) {
       const isCreator = event.createdById === req.user.id;
-      const isAdmin = membership && membership.role === "admin";
-
+      const isAdmin = membership && membership.role === 'admin';
+      
       if (!isCreator && !isAdmin) {
         return res.status(403).json({
           success: false,
-          message: "Not authorized to update attendance for other users",
+          message: 'Not authorized to update attendance for other users'
         });
       }
-
+      
       // If target user is not family member, check if they're invited
       const targetMembership = await FamilyMember.findOne({
         where: {
           familyId: event.familyId,
-          userId: targetUserId,
-        },
+          userId: targetUserId
+        }
       });
-
+      
       if (!targetMembership) {
         const targetInvitation = await EventInvitation.findOne({
           where: {
             eventId,
             userId: targetUserId,
-            status: "accepted",
-          },
+            status: 'accepted'
+          }
         });
-
+        
         if (!targetInvitation) {
           return res.status(400).json({
             success: false,
-            message:
-              "The specified user has not accepted an invitation to this event",
+            message: 'The specified user has not accepted an invitation to this event'
           });
         }
       }
@@ -429,8 +426,8 @@ exports.manageAttendance = async (req, res) => {
     let attendance = await EventAttendee.findOne({
       where: {
         eventId,
-        userId: targetUserId,
-      },
+        userId: targetUserId
+      }
     });
 
     if (attendance) {
@@ -442,20 +439,20 @@ exports.manageAttendance = async (req, res) => {
       attendance = await EventAttendee.create({
         eventId,
         userId: targetUserId,
-        status,
+        status
       });
     }
 
     res.json({
       success: true,
-      attendance,
+      attendance
     });
   } catch (error) {
-    console.error("Manage attendance error:", error);
+    console.error('Manage attendance error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -505,226 +502,6 @@ exports.getEventAttendees = async (req, res) => {
     });
   } catch (error) {
     console.error("Get attendees error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
-  }
-};
-
-// Send an invitation to a user from another family
-exports.sendEventInvitation = async (req, res) => {
-  try {
-    const { id: eventId } = req.params;
-    const { userId, message } = req.body;
-
-    // Get the event
-    const event = await Event.findByPk(eventId);
-
-    if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-      });
-    }
-
-    // Check if the current user is the creator or an admin
-    const isCreator = event.createdById === req.user.id;
-    const isAdmin = await FamilyMember.findOne({
-      where: {
-        familyId: event.familyId,
-        userId: req.user.id,
-        role: "admin",
-      },
-    });
-
-    if (!isCreator && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the event creator or family admin can send invitations",
-      });
-    }
-
-    // Check if user exists
-    const userToInvite = await User.findByPk(userId);
-    if (!userToInvite) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Check if user is already a member of this family
-    const isFamilyMember = await FamilyMember.findOne({
-      where: {
-        familyId: event.familyId,
-        userId,
-      },
-    });
-
-    if (isFamilyMember) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "User is already a member of this family - no invitation needed",
-      });
-    }
-
-    // Check if invitation already exists
-    const existingInvitation = await EventInvitation.findOne({
-      where: {
-        eventId,
-        userId,
-      },
-    });
-
-    if (existingInvitation) {
-      return res.status(400).json({
-        success: false,
-        message: "User has already been invited to this event",
-      });
-    }
-
-    // Create invitation
-    const invitation = await EventInvitation.create({
-      eventId,
-      userId,
-      invitedBy: req.user.id,
-      message: message || null,
-      status: "pending",
-    });
-
-    // TODO: Send notification to user about the invitation
-
-    res.status(201).json({
-      success: true,
-      invitation,
-    });
-  } catch (error) {
-    console.error("Send invitation error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
-  }
-};
-
-// Get all invitations for an event
-exports.getEventInvitations = async (req, res) => {
-  try {
-    const { id: eventId } = req.params;
-
-    // Get the event
-    const event = await Event.findByPk(eventId);
-
-    if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-      });
-    }
-
-    // Check if user is the creator or an admin
-    const isCreator = event.createdById === req.user.id;
-    const isAdmin = await FamilyMember.findOne({
-      where: {
-        familyId: event.familyId,
-        userId: req.user.id,
-        role: "admin",
-      },
-    });
-
-    if (!isCreator && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the event creator or family admin can view invitations",
-      });
-    }
-
-    // Get all invitations
-    const invitations = await EventInvitation.findAll({
-      where: { eventId },
-      include: [
-        {
-          model: User,
-          attributes: ["id", "firstName", "lastName", "email", "profileImage"],
-        },
-      ],
-    });
-
-    res.json({
-      success: true,
-      count: invitations.length,
-      invitations,
-    });
-  } catch (error) {
-    console.error("Get invitations error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
-  }
-};
-
-// Update an invitation (accept/decline)
-exports.updateEventInvitation = async (req, res) => {
-  try {
-    const { id: eventId, invitationId } = req.params;
-    const { status } = req.body;
-
-    // Validate status
-    if (!["accepted", "declined"].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Status must be either accepted or declined",
-      });
-    }
-
-    // Get the invitation
-    const invitation = await EventInvitation.findOne({
-      where: {
-        id: invitationId,
-        eventId,
-      },
-    });
-
-    if (!invitation) {
-      return res.status(404).json({
-        success: false,
-        message: "Invitation not found",
-      });
-    }
-
-    // Only the invited user can update the invitation
-    if (invitation.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to update this invitation",
-      });
-    }
-
-    // Update invitation status
-    invitation.status = status;
-    await invitation.save();
-
-    // If accepted, add user to event attendees
-    if (status === "accepted") {
-      await EventAttendee.create({
-        eventId,
-        userId: req.user.id,
-        status: "attending",
-      });
-    }
-
-    res.json({
-      success: true,
-      invitation,
-    });
-  } catch (error) {
-    console.error("Update invitation error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
