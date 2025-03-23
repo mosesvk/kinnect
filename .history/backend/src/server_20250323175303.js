@@ -29,7 +29,7 @@ const corsOptions = require("./config/cors");
 // Load environment variables
 dotenv.config();
 
-// Initialize express appd
+// Initialize express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 

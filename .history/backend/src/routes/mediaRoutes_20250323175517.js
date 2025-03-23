@@ -5,8 +5,7 @@ const { protect } = require('../middleware/auth');
 const {
   uploadMedia,
   getUserMedia,
-  deleteMedia, 
-  getFamilyMedia
+  deleteMedia
 } = require('../controllers/mediaController');
 
 // Media routes
@@ -15,10 +14,6 @@ const mediaRouter = express.Router()
 router.post('/upload', protect, uploadMedia);
 router.get('/', protect, getUserMedia);
 router.delete('/:id', protect, deleteMedia);
-
-// Family Media routes
-// api/families/:familyId/media
-router.get('/', protect, getFamilyMedia)
 
 module.exports = { 
   familyMediaRoutes: router,
