@@ -193,11 +193,26 @@ exports.getFamilyMedia = async (req, res) => {
     // Query media records
     const queryOptions = {
       where: {
-        url: { [Op.in]: mediaUrls }
+        url: { [Op.in]: mediaUrls },
       },
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
-      offset: parseInt(offset)
+      offset: parseInt(offset),
+      include: [
+        {
+          model: Post,
+          as: "posts",
+          include: [
+            {
+              model: Family,
+              where: { id: familyId },
+              through: { attributes: [] },
+              as: "families",
+              required: true,
+            },
+          ],
+        },
+      ],
     };
 
     // Add type filter if provided
@@ -211,8 +226,8 @@ exports.getFamilyMedia = async (req, res) => {
     // Calculate pagination info
     const totalPages = Math.ceil(count / limit);
 
-    // console.log("Found posts with media:", posts.length);
-    // console.log("Extracted media URLs:", mediaUrls.length);
+    console.log("Found posts with media:", posts.length);
+    console.log("Extracted media URLs:", mediaUrls.length);
 
     res.json({
       success: true,

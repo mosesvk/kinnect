@@ -8,7 +8,6 @@ const EventInvitation = require('./EventInvitation')
 const Post = require("./Post");
 const PostFamily = require("./PostFamily");
 const PostEvent = require("./PostEvent");
-const PostMedia = require('./PostMedia')
 const Comment = require("./Comment");
 const Like = require("./Like");
 const Media = require("./Media");
@@ -169,7 +168,6 @@ const syncDatabase = async (force = false) => {
     await Post.sync({ alter: true });
     await PostFamily.sync({ alter: true });
     await PostEvent.sync({ alter: true });
-    await PostMedia.sync({ alter: true });
     await Comment.sync({ alter: true });
     await Like.sync({ alter: true });
     await Media.sync({ alter: true });
@@ -191,7 +189,6 @@ module.exports = {
   Post,
   PostFamily,
   PostEvent,
-  PostMedia,
   Comment,
   Like,
   Media,

@@ -169,7 +169,6 @@ const syncDatabase = async (force = false) => {
     await Post.sync({ alter: true });
     await PostFamily.sync({ alter: true });
     await PostEvent.sync({ alter: true });
-    await PostMedia.sync({ alter: true });
     await Comment.sync({ alter: true });
     await Like.sync({ alter: true });
     await Media.sync({ alter: true });
