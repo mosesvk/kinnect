@@ -178,32 +178,44 @@ const uploadFile = async (file, userId) => {
 };
 
 /**
- * Delete a file from S3
+ * Delete a file from S3 (production) or local storage (development)
  * @param {string} fileUrl - URL of the file to delete
  * @param {string} thumbUrl - URL of the thumbnail to delete (optional)
  * @returns {Promise<boolean>} Success status
  */
 const deleteFile = async (fileUrl, thumbUrl = null) => {
   try {
-    if (fileUrl) {
-      // Extract key from URL
-      const fileKey = fileUrl.split('.amazonaws.com/')[1];
-      if (fileKey) {
+    if (process.env.NODE_ENV === 'production' && s3Client) {
+      // S3 deletion for production
+      if (fileUrl) {
+        const fileKey = fileUrl.split('/').slice(3).join('/');
         await s3Client.send(new DeleteObjectCommand({
           Bucket: process.env.AWS_S3_BUCKET,
           Key: fileKey,
         }));
       }
-    }
 
-    if (thumbUrl) {
-      // Extract key from URL
-      const thumbKey = thumbUrl.split('.amazonaws.com/')[1];
-      if (thumbKey) {
+      if (thumbUrl) {
+        const thumbKey = thumbUrl.split('/').slice(3).join('/');
         await s3Client.send(new DeleteObjectCommand({
           Bucket: process.env.AWS_S3_BUCKET,
           Key: thumbKey,
         }));
+      }
+    } else {
+      // Local file deletion for development
+      if (fileUrl) {
+        const filePath = path.join(__dirname, '../..', fileUrl);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      if (thumbUrl) {
+        const thumbPath = path.join(__dirname, '../..', thumbUrl);
+        if (fs.existsSync(thumbPath)) {
+          fs.unlinkSync(thumbPath);
+        }
       }
     }
     return true;

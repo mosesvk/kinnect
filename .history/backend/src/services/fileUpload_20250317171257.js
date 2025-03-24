@@ -17,15 +17,7 @@ if (!fs.existsSync(uploadDir)) {
 let s3Client;
 if (process.env.NODE_ENV === 'production') {
   s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-west-2',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-  });
-} else {
-  s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-west-2',
+    region: process.env.AWS_REGION || 'us-east-1',
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -73,7 +65,7 @@ const fileFilter = (req, file, cb) => {
 
 // Create multer upload instance
 const upload = multer({
-  storage: multer.memoryStorage(), // Always use memory storage
+  storage: process.env.NODE_ENV === 'production' ? multer.memoryStorage() : storage,
   fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB file size limit
@@ -113,7 +105,7 @@ const generateThumbnail = async (input, mimeType) => {
 };
 
 /**
- * Upload a file to S3
+ * Upload a file to S3 (production) or local storage (development)
  * @param {Object} file - File object from multer
  * @param {string} userId - ID of the user uploading the file
  * @returns {Promise<Object>} Object containing file URLs and metadata
@@ -122,28 +114,26 @@ const uploadFile = async (file, userId) => {
   const fileType = getFileTypeCategory(file.mimetype);
   let fileUrl, thumbUrl = null;
 
-  // Generate a unique key for the file
-  const fileKey = `${userId}/${fileType}/${Date.now()}-${path.basename(file.originalname)}`;
-  
-  // Upload to S3
-  const fileBuffer = file.buffer || fs.readFileSync(file.path);
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET,
-    Key: fileKey,
-    Body: fileBuffer,
-    ContentType: file.mimetype,
-  };
+  if (process.env.NODE_ENV === 'production' && s3Client) {
+    // S3 upload for production
+    const fileKey = `${userId}/${fileType}/${Date.now()}-${path.basename(file.originalname)}`;
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: fileKey,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
 
-  // Upload original file
-  await s3Client.send(new PutObjectCommand(params));
-  
-  // Set the file URL (without signed URL to avoid expiration)
-  fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+    // Upload original file
+    await s3Client.send(new PutObjectCommand(params));
+    const getCommand = new PutObjectCommand(params);
+    fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 * 24 * 7 });
+    // Remove query params for storage
+    fileUrl = fileUrl.split('?')[0];
 
-  // Generate and upload thumbnail for images
-  if (fileType === 'image') {
-    try {
-      const thumbBuffer = await generateThumbnail(fileBuffer, file.mimetype);
+    // Generate and upload thumbnail for images
+    if (fileType === 'image') {
+      const thumbBuffer = await generateThumbnail(file.buffer, file.mimetype);
       if (thumbBuffer) {
         const thumbKey = `${userId}/${fileType}/thumbs/${Date.now()}-${path.basename(file.originalname)}`;
         const thumbParams = {
@@ -153,18 +143,30 @@ const uploadFile = async (file, userId) => {
           ContentType: 'image/jpeg',
         };
         await s3Client.send(new PutObjectCommand(thumbParams));
-        
-        // Set thumbnail URL
-        thumbUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${thumbKey}`;
+        const getThumbCommand = new PutObjectCommand(thumbParams);
+        thumbUrl = await getSignedUrl(s3Client, getThumbCommand, { expiresIn: 3600 * 24 * 7 });
+        // Remove query params for storage
+        thumbUrl = thumbUrl.split('?')[0];
       }
-    } catch (error) {
-      console.error('Error generating thumbnail:', error);
     }
-  }
+  } else {
+    // Local storage for development
+    fileUrl = `/uploads/${file.filename}`;
 
-  // Clean up local file if it exists
-  if (file.path && fs.existsSync(file.path)) {
-    fs.unlinkSync(file.path);
+    // Generate thumbnail for images
+    if (fileType === 'image') {
+      const thumbFilename = `thumb-${file.filename}`;
+      const thumbPath = path.join(uploadDir, thumbFilename);
+      try {
+        await sharp(file.path)
+          .resize(300, 300, { fit: 'inside' })
+          .jpeg({ quality: 80 })
+          .toFile(thumbPath);
+        thumbUrl = `/uploads/${thumbFilename}`;
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
+      }
+    }
   }
 
   return {
@@ -178,32 +180,44 @@ const uploadFile = async (file, userId) => {
 };
 
 /**
- * Delete a file from S3
+ * Delete a file from S3 (production) or local storage (development)
  * @param {string} fileUrl - URL of the file to delete
  * @param {string} thumbUrl - URL of the thumbnail to delete (optional)
  * @returns {Promise<boolean>} Success status
  */
 const deleteFile = async (fileUrl, thumbUrl = null) => {
   try {
-    if (fileUrl) {
-      // Extract key from URL
-      const fileKey = fileUrl.split('.amazonaws.com/')[1];
-      if (fileKey) {
+    if (process.env.NODE_ENV === 'production' && s3Client) {
+      // S3 deletion for production
+      if (fileUrl) {
+        const fileKey = fileUrl.split('/').slice(3).join('/');
         await s3Client.send(new DeleteObjectCommand({
           Bucket: process.env.AWS_S3_BUCKET,
           Key: fileKey,
         }));
       }
-    }
 
-    if (thumbUrl) {
-      // Extract key from URL
-      const thumbKey = thumbUrl.split('.amazonaws.com/')[1];
-      if (thumbKey) {
+      if (thumbUrl) {
+        const thumbKey = thumbUrl.split('/').slice(3).join('/');
         await s3Client.send(new DeleteObjectCommand({
           Bucket: process.env.AWS_S3_BUCKET,
           Key: thumbKey,
         }));
+      }
+    } else {
+      // Local file deletion for development
+      if (fileUrl) {
+        const filePath = path.join(__dirname, '../..', fileUrl);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      if (thumbUrl) {
+        const thumbPath = path.join(__dirname, '../..', thumbUrl);
+        if (fs.existsSync(thumbPath)) {
+          fs.unlinkSync(thumbPath);
+        }
       }
     }
     return true;
