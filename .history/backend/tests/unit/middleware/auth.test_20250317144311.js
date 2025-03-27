@@ -129,6 +129,92 @@ describe('Auth Middleware', () => {
       });
       expect(next).not.toHaveBeenCalled();
     });
+
+    it('should handle malformed Bearer token', async () => {
+      // Mock request with malformed token
+      req.headers.authorization = 'Invalidformat';
+      
+      // Call middleware
+      await protect(req, res, next);
+      
+      // Assert 401 response
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Not authorized, no token'
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should handle token with wrong format', async () => {
+      // Mock request with token in wrong format
+      req.headers.authorization = 'Bearer ';
+      
+      // Call middleware
+      await protect(req, res, next);
+      
+      // Assert 401 response
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Not authorized, no token'
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should handle expired token', async () => {
+      // Mock request with expired token
+      req.headers.authorization = 'Bearer expiredtoken';
+      
+      // Mock JWT verify to throw TokenExpiredError
+      const tokenExpiredError = new Error('jwt expired');
+      tokenExpiredError.name = 'TokenExpiredError';
+      jwt.verify.mockImplementation(() => {
+        throw tokenExpiredError;
+      });
+      
+      // Call middleware
+      await protect(req, res, next);
+      
+      // Assert 401 response
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Not authorized, token failed'
+      });
+      expect(console.error).toHaveBeenCalledWith(
+        'Auth middleware error:',
+        expect.objectContaining({ name: 'TokenExpiredError' })
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should handle database error when finding user', async () => {
+      // Mock request with valid token
+      req.headers.authorization = 'Bearer validtoken';
+      
+      // Mock JWT verify to return decoded token
+      jwt.verify.mockReturnValue({ id: 'user123' });
+      
+      // Mock findByPk to throw error
+      const dbError = new Error('Database connection error');
+      User.findByPk.mockRejectedValue(dbError);
+      
+      // Call middleware
+      await protect(req, res, next);
+      
+      // Assert 401 response due to database error
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Not authorized, token failed'
+      });
+      expect(console.error).toHaveBeenCalledWith(
+        'Auth middleware error:',
+        expect.any(Error)
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
   });
 
   describe('admin middleware', () => {
@@ -173,5 +259,45 @@ describe('Auth Middleware', () => {
       });
       expect(next).not.toHaveBeenCalled();
     });
+    
+    it('should return 403 if user object exists but role property is missing', () => {
+      // Set user without role property
+      req.user = { id: 'user123' };
+      
+      // Call middleware
+      admin(req, res, next);
+      
+      // Assert 403 response
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Not authorized as an admin'
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should return 403 if user has a role other than "admin"', () => {
+      // Test with various non-admin roles
+      const nonAdminRoles = ['user', 'member', 'moderator', 'editor', ''];
+      
+      for (const role of nonAdminRoles) {
+        // Reset mocks for each iteration
+        jest.clearAllMocks();
+        
+        // Set user with non-admin role
+        req.user = { id: 'user123', role };
+        
+        // Call middleware
+        admin(req, res, next);
+        
+        // Assert 403 response
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Not authorized as an admin'
+        });
+        expect(next).not.toHaveBeenCalled();
+      }
+    });
   });
-});
+});a
