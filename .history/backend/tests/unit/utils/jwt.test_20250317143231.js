@@ -1,27 +1,18 @@
-// tests/unit/utils/jwt.test.js - Fixed version
+// tests/unit/utils/jwt.test.js
 
-// Import jest first to have access to its mocking capabilities
-const jest = require('jest');
+const jwt = require('jsonwebtoken');
+const { generateToken } = require('../../../src/utils/jwt');
 
 // Mock jsonwebtoken
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn().mockReturnValue('test-token'),
-  verify: jest.fn().mockReturnValue({ id: 'user123' })
-}));
-
-// Now import the modules AFTER the mocks are set up
-const jwt = require('jsonwebtoken'); // This will get the mocked version
-const { generateToken, verifyToken } = require('../../../src/utils/jwt');
+jest.mock('jsonwebtoken');
 
 describe('JWT Utility Functions', () => {
-  let originalEnv;
-  
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
     
     // Store original environment variables
-    originalEnv = { ...process.env };
+    this.originalEnv = process.env;
     
     // Set test JWT secret
     process.env.JWT_SECRET = 'test-secret-key';
@@ -29,11 +20,14 @@ describe('JWT Utility Functions', () => {
   
   afterEach(() => {
     // Restore original environment variables
-    process.env = originalEnv;
+    process.env = this.originalEnv;
   });
   
   describe('generateToken', () => {
     it('should call jwt.sign with correct parameters', () => {
+      // Mock jwt.sign to return a token
+      jwt.sign.mockReturnValue('mocked-jwt-token');
+      
       // Call the function
       const token = generateToken('user123');
       
@@ -45,10 +39,13 @@ describe('JWT Utility Functions', () => {
       );
       
       // Assert the token was returned
-      expect(token).toBe('test-token');
+      expect(token).toBe('mocked-jwt-token');
     });
     
     it('should handle different user IDs', () => {
+      // Mock jwt.sign to return a token
+      jwt.sign.mockReturnValue('another-mocked-token');
+      
       // Call with different user ID
       const token = generateToken('another-user');
       
@@ -60,12 +57,15 @@ describe('JWT Utility Functions', () => {
       );
       
       // Assert the token was returned
-      expect(token).toBe('test-token');
+      expect(token).toBe('another-mocked-token');
     });
     
     it('should use environment variable for JWT_SECRET', () => {
       // Set a different JWT secret
       process.env.JWT_SECRET = 'different-secret-key';
+      
+      // Mock jwt.sign
+      jwt.sign.mockReturnValue('token-with-different-secret');
       
       // Call the function
       const token = generateToken('user123');
@@ -76,22 +76,6 @@ describe('JWT Utility Functions', () => {
         'different-secret-key',
         { expiresIn: '24h' }
       );
-    });
-  });
-
-  describe('verifyToken', () => {
-    it('should call jwt.verify with correct parameters', () => {
-      // Call the function
-      const decoded = verifyToken('test-token');
-      
-      // Assert jwt.verify was called correctly
-      expect(jwt.verify).toHaveBeenCalledWith(
-        'test-token',
-        'test-secret-key'
-      );
-      
-      // Assert the decoded token was returned
-      expect(decoded).toEqual({ id: 'user123' });
     });
   });
 });

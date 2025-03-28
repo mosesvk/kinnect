@@ -247,7 +247,7 @@ describe("User Controller Unit Tests", () => {
           password: "password123",
         },
       };
-    
+
       // Mock user found
       const mockUser = {
         id: "user123",
@@ -258,18 +258,18 @@ describe("User Controller Unit Tests", () => {
         matchPassword: jest.fn().mockResolvedValue(true),
         generateToken: jest.fn().mockReturnValue("test-token"),
       };
-    
+
       User.findOne.mockResolvedValueOnce(mockUser);
       bcrypt.compare.mockResolvedValueOnce(true);
-    
+
       // Call the controller
       await userController.loginUser(req, res);
-    
+
       // Assertions
       expect(User.findOne).toHaveBeenCalledWith({
         where: { email: "test@example.com" },
       });
-    
+
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "password123",
         "hashedpassword"

@@ -112,10 +112,10 @@ describe("User Controller Unit Tests", () => {
           password: "password123",
         },
       };
-    
+
       // Mock user not existing yet
       User.findOne.mockResolvedValueOnce(null);
-    
+
       // Mock user creation
       const mockCreatedUser = {
         id: "user123",
@@ -124,24 +124,24 @@ describe("User Controller Unit Tests", () => {
         email: "test@example.com",
         passwordHash: "hashedpassword",
       };
-    
+
       User.create.mockResolvedValueOnce(mockCreatedUser);
-    
+
       // Call the controller
       await userController.registerUser(req, res);
-    
+
       // Assertions
       expect(User.findOne).toHaveBeenCalledWith({
         where: { email: "test@example.com" },
       });
-    
+
       expect(User.create).toHaveBeenCalledWith({
         firstName: "Test",
         lastName: "User",
         email: "test@example.com",
-        passwordHash: "password123", // In real implementation this would be hashed
+        passwordHash: "password123",
       });
-    
+
       expect(jwt.sign).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
@@ -247,7 +247,7 @@ describe("User Controller Unit Tests", () => {
           password: "password123",
         },
       };
-    
+
       // Mock user found
       const mockUser = {
         id: "user123",
@@ -258,18 +258,18 @@ describe("User Controller Unit Tests", () => {
         matchPassword: jest.fn().mockResolvedValue(true),
         generateToken: jest.fn().mockReturnValue("test-token"),
       };
-    
+
       User.findOne.mockResolvedValueOnce(mockUser);
       bcrypt.compare.mockResolvedValueOnce(true);
-    
+
       // Call the controller
       await userController.loginUser(req, res);
-    
+
       // Assertions
       expect(User.findOne).toHaveBeenCalledWith({
         where: { email: "test@example.com" },
       });
-    
+
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "password123",
         "hashedpassword"

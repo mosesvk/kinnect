@@ -1,7 +1,7 @@
 // tests/unit/utils/jwt.test.js - Fixed version
 
-// Import jest first to have access to its mocking capabilities
-const jest = require('jest');
+const jwt = require('jsonwebtoken');
+const { generateToken, verifyToken } = require('../../../src/utils/jwt');
 
 // Mock jsonwebtoken
 jest.mock('jsonwebtoken', () => ({
@@ -9,19 +9,13 @@ jest.mock('jsonwebtoken', () => ({
   verify: jest.fn().mockReturnValue({ id: 'user123' })
 }));
 
-// Now import the modules AFTER the mocks are set up
-const jwt = require('jsonwebtoken'); // This will get the mocked version
-const { generateToken, verifyToken } = require('../../../src/utils/jwt');
-
 describe('JWT Utility Functions', () => {
-  let originalEnv;
-  
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
     
     // Store original environment variables
-    originalEnv = { ...process.env };
+    this.originalEnv = { ...process.env };
     
     // Set test JWT secret
     process.env.JWT_SECRET = 'test-secret-key';
@@ -29,7 +23,7 @@ describe('JWT Utility Functions', () => {
   
   afterEach(() => {
     // Restore original environment variables
-    process.env = originalEnv;
+    process.env = this.originalEnv;
   });
   
   describe('generateToken', () => {
