@@ -420,7 +420,7 @@ describe("User API Endpoints", () => {
       });
 
       // Mock the deleteFile function if it's used
-      jest.mock("../../../src/services/fileUplad", () => ({
+      jest.mock("../../../src/services/fileUpload", () => ({
         deleteFile: jest.fn().mockResolvedValue(true),
       }));
 

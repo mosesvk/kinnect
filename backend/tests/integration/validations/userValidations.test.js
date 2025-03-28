@@ -6,6 +6,7 @@ const {
   validateUserRegistration,
   validateUserLogin,
   validateUserUpdate,
+  validateUserDeletion
 } = require("../../../src/validations/userValidations");
 const {
   createValidationTestApp,
@@ -17,6 +18,7 @@ describe("User Validations Integration Tests", () => {
     "user-registration": validateUserRegistration,
     "user-login": validateUserLogin,
     "user-update": validateUserUpdate,
+    "user-delete": validateUserDeletion
   });
 
   describe("User Registration Validation", () => {
