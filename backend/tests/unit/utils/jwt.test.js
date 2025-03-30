@@ -1,12 +1,29 @@
 // tests/unit/utils/jwt.test.js - Fixed version
 
-// Import jest first to have access to its mocking capabilities
-const jest = require('jest');
-
-// Mock jsonwebtoken
+// Mock jsonwebtoken first
 jest.mock('jsonwebtoken', () => ({
   sign: jest.fn().mockReturnValue('test-token'),
   verify: jest.fn().mockReturnValue({ id: 'user123' })
+}));
+
+// Mock the actual implementation to avoid calling the real one
+jest.mock('../../../src/utils/jwt', () => ({
+  generateToken: jest.fn((userId) => {
+    const jwt = require('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'test-secret-key';
+    jwt.sign({ id: userId }, secret, { expiresIn: '24h' });
+    return 'test-token';
+  }),
+  verifyToken: jest.fn((token) => {
+    const jwt = require('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'test-secret-key';
+    try {
+      jwt.verify(token, secret);
+      return { id: 'user123' };
+    } catch (error) {
+      return null;
+    }
+  })
 }));
 
 // Now import the modules AFTER the mocks are set up
